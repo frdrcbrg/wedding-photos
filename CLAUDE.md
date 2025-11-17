@@ -69,16 +69,47 @@ npm start
 
 ```bash
 # Build and run with Docker Compose
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop containers
-docker-compose down
+docker compose down
 
-# Rebuild after changes
-docker-compose build --no-cache
+# Rebuild after changes (local build)
+docker compose build --no-cache
+```
+
+## CI/CD Deployment
+
+The project uses GitHub Actions for automated builds and deployment:
+
+- **On push to main**: Builds Docker image and pushes to GitHub Container Registry (ghcr.io)
+- **Auto-deploy**: SSHs to server and deploys the new image automatically
+- **No server building**: Pre-built images are pulled, saving server resources
+
+See `CI_CD_SETUP.md` for complete setup instructions.
+
+### Quick Deploy
+
+```bash
+# Simply push to main
+git push origin main
+
+# GitHub Actions handles the rest:
+# 1. Builds image on GitHub
+# 2. Pushes to ghcr.io/frdrcbrg/wedding-photos:latest
+# 3. SSHs to server and restarts with new image
+```
+
+### Manual Server Deploy (using pre-built image)
+
+```bash
+cd /opt/docker/wedding-photos
+git pull
+docker pull ghcr.io/frdrcbrg/wedding-photos:latest
+docker compose up -d
 ```
 
 ### Testing

@@ -1,5 +1,7 @@
 services:
   wedding-photos:
+    image: ghcr.io/frdrcbrg/wedding-photos:latest
+    # Fallback to local build if image not available
     build: .
     container_name: winter-wedding-app
     restart: unless-stopped

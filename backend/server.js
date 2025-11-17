@@ -19,6 +19,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Access code from environment variable
 const ACCESS_CODE = process.env.ACCESS_CODE || 'WINTER2025';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 // Run S3 preflight check on startup
 (async () => {
@@ -196,6 +197,55 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
   });
+});
+
+// ===== Admin Routes =====
+
+/**
+ * POST /api/admin/login
+ * Verify admin password
+ */
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ error: 'Password is required' });
+  }
+
+  if (password === ADMIN_PASSWORD) {
+    return res.json({ success: true, message: 'Admin access granted' });
+  } else {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+});
+
+/**
+ * DELETE /api/admin/delete/:id
+ * Delete a photo/video by ID
+ */
+app.delete('/api/admin/delete/:id', async (req, res) => {
+  try {
+    // Verify admin authorization
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer token
+
+    if (!token || token !== ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const photoId = req.params.id;
+
+    // Delete from database
+    await dbOps.deleteUpload(photoId);
+
+    res.json({
+      success: true,
+      message: 'Photo deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    res.status(500).json({ error: 'Failed to delete photo' });
+  }
 });
 
 // Serve frontend for all other routes

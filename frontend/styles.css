@@ -151,6 +151,17 @@ body {
   z-index: 2;
 }
 
+.logo-container {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.wedding-logo {
+  max-width: 200px;
+  height: auto;
+  opacity: 0.9;
+}
+
 .title {
   font-family: var(--font-serif);
   font-size: 3.5em;
@@ -554,6 +565,10 @@ body {
 
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
+  .wedding-logo {
+    max-width: 150px;
+  }
+
   .title {
     font-size: 2.5em;
   }

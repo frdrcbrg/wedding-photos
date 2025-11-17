@@ -33,10 +33,18 @@ Complete step-by-step guide for deploying your Winter Wedding Photo App.
    ```json
    [
      {
-       "AllowedHeaders": ["*"],
-       "AllowedMethods": ["GET", "PUT", "POST"],
        "AllowedOrigins": ["*"],
-       "ExposeHeaders": ["ETag"]
+       "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+       "AllowedHeaders": [
+         "*",
+         "x-amz-*",
+         "content-type",
+         "content-length"
+       ],
+       "ExposeHeaders": [
+         "ETag",
+         "x-amz-version-id"
+       ]
      }
    ]
    ```
@@ -80,18 +88,32 @@ Complete step-by-step guide for deploying your Winter Wedding Photo App.
 2. **Configure CORS:**
    - Select your Space
    - Go to "Settings" tab
-   - Add CORS configuration:
+   - Scroll to "CORS Configurations"
+   - Add this CORS configuration:
 
    ```json
    [
      {
-       "AllowedHeaders": ["*"],
-       "AllowedMethods": ["GET", "PUT", "POST"],
        "AllowedOrigins": ["*"],
+       "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+       "AllowedHeaders": [
+         "*",
+         "x-amz-*",
+         "content-type",
+         "content-length",
+         "x-amz-checksum-crc32",
+         "x-amz-sdk-checksum-algorithm"
+       ],
+       "ExposeHeaders": [
+         "ETag",
+         "x-amz-version-id"
+       ],
        "MaxAgeSeconds": 3000
      }
    ]
    ```
+
+   **Important:** Make sure to include the `x-amz-*` headers as AWS SDK v3 requires these for checksums.
 
 3. **Generate API Keys:**
    - Go to "API" → "Spaces Keys"

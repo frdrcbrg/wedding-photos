@@ -33,44 +33,18 @@
     </div>
   </div>
 
-  <!-- Upload Details Modal -->
+  <!-- Upload Progress Modal -->
   <div id="uploadModal" class="modal hidden">
     <div class="modal-content frosted">
       <div class="modal-header">
-        <h2>Add Details (Optional)</h2>
         <p id="uploadModalFileCount"></p>
       </div>
-      <form id="uploadDetailsForm">
-        <div class="form-group">
-          <label for="guestName">Your Name</label>
-          <input
-            type="text"
-            id="guestName"
-            placeholder="e.g., Sarah & John"
-          >
+      <div id="uploadProgress" class="upload-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
         </div>
-
-        <div class="form-group">
-          <label for="guestMessage">Message</label>
-          <textarea
-            id="guestMessage"
-            rows="3"
-            placeholder="Share a special message or memory..."
-          ></textarea>
-        </div>
-
-        <div id="uploadProgress" class="upload-progress hidden">
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-          <p id="uploadStatus">Uploading...</p>
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn-secondary" id="cancelUpload" style="flex: 1;">Cancel</button>
-          <button type="submit" class="btn-primary" id="startUpload" style="flex: 1;">Upload</button>
-        </div>
-      </form>
+        <p id="uploadStatus">Uploading...</p>
+      </div>
     </div>
   </div>
 

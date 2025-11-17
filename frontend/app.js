@@ -9,13 +9,8 @@ const accessCodeInput = document.getElementById('accessCodeInput');
 const accessError = document.getElementById('accessError');
 
 const uploadModal = document.getElementById('uploadModal');
-const uploadDetailsForm = document.getElementById('uploadDetailsForm');
 const uploadModalFileCount = document.getElementById('uploadModalFileCount');
 const fileInput = document.getElementById('fileInput');
-const guestName = document.getElementById('guestName');
-const guestMessage = document.getElementById('guestMessage');
-const startUpload = document.getElementById('startUpload');
-const cancelUpload = document.getElementById('cancelUpload');
 const uploadProgress = document.getElementById('uploadProgress');
 const progressFill = document.getElementById('progressFill');
 const uploadStatus = document.getElementById('uploadStatus');
@@ -39,7 +34,6 @@ const videoCount = document.getElementById('videoCount');
 let isAuthenticated = false;
 let currentPhotos = [];
 let currentPhotoIndex = -1;
-let selectedFiles = [];
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -52,8 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners
   accessForm.addEventListener('submit', handleAccessSubmit);
   fileInput.addEventListener('change', handleFileSelect);
-  uploadDetailsForm.addEventListener('submit', handleUploadSubmit);
-  cancelUpload.addEventListener('click', handleCancelUpload);
   closeLightbox.addEventListener('click', closeLightboxModal);
   lightboxPrev.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -111,7 +103,7 @@ async function verifyAccess(code, silent = false) {
 }
 
 // ===== File Selection =====
-function handleFileSelect(e) {
+async function handleFileSelect(e) {
   const files = Array.from(e.target.files);
 
   if (files.length === 0) {
@@ -123,48 +115,27 @@ function handleFileSelect(e) {
   const oversizedFiles = files.filter(file => file.size > maxSize);
   if (oversizedFiles.length > 0) {
     alert('Some files are too large. Maximum file size is 100MB.');
+    fileInput.value = '';
     return;
   }
 
-  // Store selected files
-  selectedFiles = files;
+  // Start upload immediately
+  await startUploadProcess(files);
+}
 
-  // Show upload modal with file count
-  const fileCount = files.length === 1 ? '1 file selected' : `${files.length} files selected`;
+async function startUploadProcess(files) {
+  // Show upload modal with progress
+  const fileCount = files.length === 1 ? 'Uploading 1 file...' : `Uploading ${files.length} files...`;
   uploadModalFileCount.textContent = fileCount;
   uploadModal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function handleCancelUpload() {
-  uploadModal.classList.add('hidden');
-  document.body.style.overflow = 'auto';
-  fileInput.value = '';
-  selectedFiles = [];
-  guestName.value = '';
-  guestMessage.value = '';
-}
-
-// ===== Upload Handling =====
-async function handleUploadSubmit(e) {
-  e.preventDefault();
-
-  if (selectedFiles.length === 0) {
-    alert('No files selected');
-    return;
-  }
-
-  // Disable form
-  startUpload.disabled = true;
-  cancelUpload.disabled = true;
-  uploadProgress.classList.remove('hidden');
   progressFill.style.width = '0%';
+  document.body.style.overflow = 'hidden';
 
   try {
-    const totalFiles = selectedFiles.length;
+    const totalFiles = files.length;
     let completedFiles = 0;
 
-    for (const file of selectedFiles) {
+    for (const file of files) {
       uploadStatus.textContent = `Uploading ${completedFiles + 1} of ${totalFiles}...`;
 
       await uploadFile(file);
@@ -182,13 +153,7 @@ async function handleUploadSubmit(e) {
     setTimeout(() => {
       uploadModal.classList.add('hidden');
       document.body.style.overflow = 'auto';
-      uploadProgress.classList.add('hidden');
-      startUpload.disabled = false;
-      cancelUpload.disabled = false;
       fileInput.value = '';
-      selectedFiles = [];
-      guestName.value = '';
-      guestMessage.value = '';
 
       // Reload gallery
       loadGallery();
@@ -198,15 +163,16 @@ async function handleUploadSubmit(e) {
   } catch (error) {
     console.error('Upload error:', error);
     uploadStatus.textContent = '❌ Upload failed. Please try again.';
-    startUpload.disabled = false;
-    cancelUpload.disabled = false;
 
     setTimeout(() => {
-      uploadProgress.classList.add('hidden');
+      uploadModal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      fileInput.value = '';
     }, 3000);
   }
 }
 
+// ===== Upload Handling =====
 async function uploadFile(file) {
   // Step 1: Get presigned URL from backend
   const urlResponse = await fetch(`${API_BASE}/api/upload-url`, {
@@ -247,8 +213,8 @@ async function uploadFile(file) {
       s3Key: s3Key,
       s3Url: publicUrl,
       fileType: fileType,
-      uploadedBy: guestName.value.trim() || null,
-      message: guestMessage.value.trim() || null,
+      uploadedBy: null,
+      message: null,
     }),
   });
 

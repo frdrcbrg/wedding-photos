@@ -118,7 +118,7 @@ app.post('/api/confirm', async (req, res) => {
  */
 app.get('/api/photos', async (req, res) => {
   try {
-    const uploads = dbOps.getAllUploads();
+    const uploads = await dbOps.getAllUploads();
 
     // Generate fresh presigned URLs for each upload
     const uploadsWithFreshUrls = await Promise.all(

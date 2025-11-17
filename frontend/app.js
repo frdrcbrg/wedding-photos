@@ -91,12 +91,6 @@ async function verifyAccess(code, silent = false) {
       // Load content
       loadGallery();
       loadStats();
-
-      // Refresh gallery every 30 seconds
-      setInterval(() => {
-        loadGallery();
-        loadStats();
-      }, 30000);
     } else {
       if (!silent) {
         accessError.textContent = data.error || 'Invalid access code';

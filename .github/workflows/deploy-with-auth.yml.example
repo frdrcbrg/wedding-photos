@@ -1,4 +1,7 @@
-name: Build and Deploy
+# Alternative workflow if you want to keep the registry private
+# Requires setting up GHCR_TOKEN secret with a Personal Access Token
+
+name: Build and Deploy (Private Registry)
 
 on:
   push:
@@ -54,18 +57,23 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           IMAGE_URL: ghcr.io/${{ github.repository }}:latest
+          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_USER: ${{ github.repository_owner }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: IMAGE_URL
+          envs: IMAGE_URL,GHCR_TOKEN,GHCR_USER
           script: |
             cd /opt/docker/wedding-photos
 
             # Pull latest code (for docker-compose.yml)
             git pull
 
-            # Pull the latest image (public registry, no login needed)
+            # Login to GitHub Container Registry with PAT
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # Pull the latest image
             docker pull $IMAGE_URL
 
             # Restart the container with new image

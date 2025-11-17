@@ -31,6 +31,7 @@ async function generateThumbnail(originalUrl, originalKey) {
 
     // Generate thumbnail using sharp
     const thumbnailBuffer = await sharp(imageBuffer)
+      .rotate() // Auto-rotate based on EXIF orientation
       .resize(THUMB_WIDTH, THUMB_HEIGHT, {
         fit: 'cover',
         position: 'center',

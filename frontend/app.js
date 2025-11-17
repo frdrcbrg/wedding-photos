@@ -303,7 +303,7 @@ function createGalleryItem(photo) {
     <div class="gallery-item" data-id="${photo.id}">
       ${videoIndicator}
       ${mediaTag}
-      <div class="gallery-item-info">
+      <div class="gallery-item-overlay">
         <div class="gallery-item-name">${escapeHtml(displayName)}</div>
         ${displayMessage ? `<div class="gallery-item-message">${escapeHtml(displayMessage)}</div>` : ''}
         <div class="gallery-item-date">${displayDate}</div>

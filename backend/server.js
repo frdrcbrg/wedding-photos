@@ -83,7 +83,7 @@ app.post('/api/upload-url', async (req, res) => {
  * POST /api/confirm
  * Confirm upload and save metadata to database
  */
-app.post('/api/confirm', (req, res) => {
+app.post('/api/confirm', async (req, res) => {
   try {
     const { filename, s3Key, s3Url, fileType, uploadedBy, message } = req.body;
 
@@ -92,7 +92,7 @@ app.post('/api/confirm', (req, res) => {
     }
 
     // Insert into database
-    const result = dbOps.insertUpload({
+    const result = await dbOps.insertUpload({
       filename,
       s3_key: s3Key,
       s3_url: s3Url,
@@ -147,9 +147,9 @@ app.get('/api/photos', async (req, res) => {
  * GET /api/stats
  * Get upload statistics
  */
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', async (req, res) => {
   try {
-    const stats = dbOps.getStats();
+    const stats = await dbOps.getStats();
     res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);

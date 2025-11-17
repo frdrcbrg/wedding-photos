@@ -8,8 +8,9 @@ A minimalistic winter-themed wedding photo sharing web application. Guests can u
 
 ## Tech Stack
 
-- **Backend**: Node.js + Express, SQLite (better-sqlite3), AWS SDK v3 for S3
+- **Backend**: Node.js + Express, PostgreSQL (pg), AWS SDK v3 for S3
 - **Frontend**: Pure HTML/CSS/JavaScript (no frameworks)
+- **Database**: PostgreSQL 15
 - **Storage**: S3-compatible (AWS S3 or DigitalOcean Spaces)
 - **Deployment**: Docker with multi-stage builds
 
@@ -62,13 +63,13 @@ No automated tests are currently configured. Test manually:
 2. **Upload Flow**:
    - Frontend requests presigned URL → `/api/upload-url`
    - Client uploads directly to S3 using presigned URL
-   - Client confirms upload → `/api/confirm` saves metadata to SQLite
-3. **Gallery**: Frontend fetches from `/api/photos` (metadata only, S3 URLs for media)
+   - Client confirms upload → `/api/confirm` saves metadata to PostgreSQL
+3. **Gallery**: Frontend fetches from `/api/photos` (metadata with fresh presigned URLs generated on each request)
 
 ### Key Files
 
 - `backend/server.js` - Express app with all API routes
-- `backend/database.js` - SQLite operations (uploads table)
+- `backend/database.js` - PostgreSQL operations with connection pooling (uploads table)
 - `backend/s3.js` - S3 presigned URL generation and file validation
 - `frontend/app.js` - Client-side upload logic, gallery, lightbox
 - `frontend/index.html` - Single-page app structure
@@ -77,22 +78,24 @@ No automated tests are currently configured. Test manually:
 ### Data Flow
 
 ```
-Browser → Backend (presigned URL) → Direct S3 Upload → Backend (confirm) → SQLite
-         ↓                                                                    ↓
-    Gallery fetch ←──────────────── API ←─────────────────────── Database
+Browser → Backend (presigned URL) → Direct S3 Upload → Backend (confirm) → PostgreSQL
+         ↓                                                                      ↓
+    Gallery fetch ←──────────────── API ←─────────────────────────── Database
 ```
 
 ### Database Schema
 
-`uploads` table:
-- `id` (INTEGER PRIMARY KEY)
-- `filename` (TEXT)
-- `s3_key` (TEXT) - S3 object key
-- `s3_url` (TEXT) - Public/presigned URL
-- `file_type` (TEXT) - 'photo' or 'video'
+`uploads` table (PostgreSQL):
+- `id` (SERIAL PRIMARY KEY)
+- `filename` (TEXT NOT NULL)
+- `s3_key` (TEXT NOT NULL) - S3 object key
+- `s3_url` (TEXT NOT NULL) - Stored presigned URL (refreshed on fetch)
+- `file_type` (TEXT NOT NULL) - 'photo' or 'video'
 - `uploaded_by` (TEXT) - Optional guest name
 - `message` (TEXT) - Optional message
-- `uploaded_at` (DATETIME)
+- `uploaded_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+
+**Note**: All database operations are async using `pg` connection pool.
 
 ## Environment Configuration
 
@@ -100,13 +103,17 @@ Copy `.env.example` to `.env` and configure:
 
 Required:
 - `ACCESS_CODE` - Single shared code for guests
+- `POSTGRES_HOST` - Database host (default: db)
+- `POSTGRES_PORT` - Database port (default: 5432)
+- `POSTGRES_USER` - Database user
+- `POSTGRES_PASSWORD` - Database password
+- `POSTGRES_DB` - Database name
 - `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` - S3 credentials
 - `S3_BUCKET_NAME` - S3 bucket or Space name
 - `S3_REGION` - AWS region (default: us-east-1)
 
 For DigitalOcean Spaces:
-- `S3_ENDPOINT` - e.g., `https://nyc3.digitaloceanspaces.com`
-- `S3_FORCE_PATH_STYLE=true`
+- `S3_ENDPOINT` - e.g., `https://fra1.digitaloceanspaces.com` (region endpoint only, not bucket URL)
 
 ## File Upload Details
 
@@ -176,17 +183,20 @@ Bucket permissions: Either public-read ACL or presigned URLs for downloads.
 
 See `DEPLOYMENT.md` for detailed steps. Summary:
 1. Set up S3 bucket with CORS
-2. Configure `.env` with production values
-3. Deploy via Docker on DigitalOcean Droplet or similar
-4. Use Nginx/Caddy for HTTPS reverse proxy
-5. Database persists via Docker volume `wedding-data`
+2. Set up PostgreSQL database (or use existing)
+3. Configure `.env` with production values (database credentials, S3, access code)
+4. Deploy via Docker on DigitalOcean Droplet or similar
+5. Use Nginx/Caddy for HTTPS reverse proxy
+6. Application connects to external PostgreSQL database via `POSTGRES_HOST`
 
 ## Common Issues
 
 **Uploads fail**: Check S3 credentials, bucket CORS, and browser console for errors
 
-**Database locked**: SQLite doesn't support concurrent writes well; use better-sqlite3's synchronous API (already configured)
+**Database connection fails**: Verify PostgreSQL credentials and that the `db` container is running on the same network
 
-**CORS errors**: Verify S3 bucket CORS includes PUT method and your origin
+**CORS errors**: Verify S3 bucket CORS includes PUT, HEAD methods and x-amz-* headers
 
-**Container won't start**: Check logs with `docker-compose logs`, ensure `.env` exists with all required variables
+**Container won't start**: Check logs with `docker compose logs`, ensure `.env` exists with all required variables including PostgreSQL credentials
+
+**Presigned URLs not working**: Check that S3_ENDPOINT is the region endpoint only (e.g., `https://fra1.digitaloceanspaces.com`), not including the bucket name

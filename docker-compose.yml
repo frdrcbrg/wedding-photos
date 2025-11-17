@@ -11,14 +11,18 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - ACCESS_CODE=${ACCESS_CODE:-WINTER2025}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - S3_REGION=${S3_REGION:-us-east-1}
       - S3_ENDPOINT=${S3_ENDPOINT:-}
-    volumes:
-      # Persist SQLite database
-      - wedding-data:/app/backend
+    depends_on:
+      - db
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -29,8 +33,6 @@ services:
       - caddy
 
 volumes:
-  wedding-data:
-    driver: local
 
 networks:
   caddy:

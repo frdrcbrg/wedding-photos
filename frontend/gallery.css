@@ -259,10 +259,6 @@ body {
   z-index: 1;
 }
 
-.gallery-item:hover .gallery-item-overlay {
-  opacity: 1;
-}
-
 .gallery-item img,
 .gallery-item video {
   width: 100%;

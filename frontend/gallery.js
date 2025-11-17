@@ -193,19 +193,10 @@ function createGalleryItem(photo) {
 
   const videoIndicator = isVideo ? '<div class="video-indicator">▶</div>' : '';
 
-  const displayName = photo.uploaded_by || 'Anonymous';
-  const displayMessage = photo.message || '';
-  const displayDate = formatDate(photo.uploaded_at);
-
   return `
     <div class="gallery-item" data-id="${photo.id}">
       ${videoIndicator}
       ${mediaTag}
-      <div class="gallery-item-overlay">
-        <div class="gallery-item-name">${escapeHtml(displayName)}</div>
-        ${displayMessage ? `<div class="gallery-item-message">${escapeHtml(displayMessage)}</div>` : ''}
-        <div class="gallery-item-date">${displayDate}</div>
-      </div>
     </div>
   `;
 }

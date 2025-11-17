@@ -6,14 +6,14 @@
 }
 
 :root {
-  /* Winter Wedding Color Palette */
-  --ice-blue: #E3F2FD;
+  /* Wedding Color Palette */
+  --main-color: #ae9883;
+  --main-color-light: #c7b5a3;
+  --main-color-lighter: #e8dfd6;
+  --main-color-dark: #8a7664;
   --snow-white: #FAFAFA;
-  --frost-blue: #BBDEFB;
-  --deep-blue: #2196F3;
-  --silver: #C0C0C0;
   --charcoal: #37474F;
-  --shadow: rgba(33, 150, 243, 0.1);
+  --shadow: rgba(174, 152, 131, 0.15);
 
   /* Typography */
   --font-serif: 'Cormorant Garamond', serif;
@@ -22,7 +22,7 @@
 
 body {
   font-family: var(--font-sans);
-  background: linear-gradient(135deg, #E3F2FD 0%, #FAFAFA 50%, #E1F5FE 100%);
+  background: linear-gradient(135deg, var(--main-color-lighter) 0%, #FAFAFA 50%, var(--main-color-lighter) 100%);
   min-height: 100vh;
   color: var(--charcoal);
   line-height: 1.6;
@@ -113,7 +113,7 @@ body {
   font-family: var(--font-serif);
   font-size: 2.5em;
   font-weight: 300;
-  color: var(--deep-blue);
+  color: var(--main-color);
   margin-bottom: 10px;
 }
 
@@ -126,7 +126,7 @@ body {
 #accessForm input {
   width: 100%;
   padding: 15px 20px;
-  border: 2px solid var(--frost-blue);
+  border: 2px solid var(--main-color-light);
   border-radius: 10px;
   font-size: 1.1em;
   text-align: center;
@@ -138,8 +138,8 @@ body {
 
 #accessForm input:focus {
   outline: none;
-  border-color: var(--deep-blue);
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: var(--main-color);
+  box-shadow: 0 0 0 3px rgba(174, 152, 131, 0.2);
 }
 
 .error-message {
@@ -151,7 +151,7 @@ body {
 
 /* ===== Buttons ===== */
 .btn-primary {
-  background: linear-gradient(135deg, var(--deep-blue) 0%, #42A5F5 100%);
+  background: linear-gradient(135deg, var(--main-color) 0%, var(--main-color-light) 100%);
   color: white;
   border: none;
   padding: 15px 40px;
@@ -167,7 +167,7 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+  box-shadow: 0 8px 20px rgba(174, 152, 131, 0.3);
 }
 
 .btn-primary:active {
@@ -192,7 +192,7 @@ body {
   font-family: var(--font-serif);
   font-size: 3.5em;
   font-weight: 300;
-  color: var(--deep-blue);
+  color: var(--main-color);
   margin-bottom: 10px;
   text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
 }
@@ -220,7 +220,7 @@ body {
 .stat-number {
   font-size: 2.5em;
   font-weight: 600;
-  color: var(--deep-blue);
+  color: var(--main-color);
 }
 
 .stat-label {
@@ -249,7 +249,7 @@ body {
   font-family: var(--font-serif);
   font-size: 2em;
   font-weight: 400;
-  color: var(--deep-blue);
+  color: var(--main-color);
   margin-bottom: 30px;
   text-align: center;
 }
@@ -270,7 +270,7 @@ body {
 .form-group textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid var(--frost-blue);
+  border: 2px solid var(--main-color-light);
   border-radius: 10px;
   font-family: var(--font-sans);
   font-size: 1em;
@@ -280,8 +280,8 @@ body {
 .form-group input[type="text"]:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--deep-blue);
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: var(--main-color);
+  box-shadow: 0 0 0 3px rgba(174, 152, 131, 0.2);
 }
 
 .form-group textarea {
@@ -305,16 +305,16 @@ body {
   justify-content: center;
   gap: 10px;
   padding: 15px 20px;
-  border: 2px dashed var(--frost-blue);
+  border: 2px dashed var(--main-color-light);
   border-radius: 10px;
   background: rgba(227, 242, 253, 0.3);
-  color: var(--deep-blue);
+  color: var(--main-color);
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
 .file-input-label:hover .file-input-button {
-  border-color: var(--deep-blue);
+  border-color: var(--main-color);
   background: rgba(227, 242, 253, 0.5);
 }
 
@@ -333,7 +333,7 @@ body {
 .progress-bar {
   width: 100%;
   height: 8px;
-  background: var(--frost-blue);
+  background: var(--main-color);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -341,14 +341,14 @@ body {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--deep-blue) 0%, #42A5F5 100%);
+  background: linear-gradient(90deg, var(--main-color) 0%, var(--main-color-light) 100%);
   width: 0%;
   transition: width 0.3s ease;
 }
 
 #uploadStatus {
   text-align: center;
-  color: var(--deep-blue);
+  color: var(--main-color);
   font-size: 0.9em;
 }
 
@@ -363,7 +363,7 @@ body {
   font-family: var(--font-serif);
   font-size: 2.5em;
   font-weight: 300;
-  color: var(--deep-blue);
+  color: var(--main-color);
   text-align: center;
   margin-bottom: 40px;
 }
@@ -570,7 +570,7 @@ body {
   font-size: 1.3em;
   font-weight: 500;
   margin-bottom: 10px;
-  color: var(--frost-blue);
+  color: var(--main-color-light);
 }
 
 .lightbox-message {

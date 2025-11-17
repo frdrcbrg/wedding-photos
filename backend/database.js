@@ -83,6 +83,18 @@ const dbOps = {
     return result;
   },
 
+  // Delete all uploads (admin function)
+  deleteAllUploads: async () => {
+    const countSql = 'SELECT COUNT(*) FROM uploads';
+    const countResult = await pool.query(countSql);
+    const count = parseInt(countResult.rows[0].count);
+
+    const deleteSql = 'DELETE FROM uploads';
+    await pool.query(deleteSql);
+
+    return count;
+  },
+
   // Close pool (for graceful shutdown)
   close: async () => {
     await pool.end();

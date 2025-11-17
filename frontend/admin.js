@@ -8,6 +8,7 @@ const adminLoginForm = document.getElementById('adminLoginForm');
 const adminPassword = document.getElementById('adminPassword');
 const adminError = document.getElementById('adminError');
 const logoutBtn = document.getElementById('logoutBtn');
+const deleteAllBtn = document.getElementById('deleteAllBtn');
 const adminGallery = document.getElementById('adminGallery');
 
 const adminTotalCount = document.getElementById('adminTotalCount');
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners
   adminLoginForm.addEventListener('submit', handleAdminLogin);
   logoutBtn.addEventListener('click', handleLogout);
+  deleteAllBtn.addEventListener('click', handleDeleteAll);
 });
 
 // ===== Admin Authentication =====
@@ -188,6 +190,55 @@ async function handleDelete(photoId) {
     alert('Failed to delete photo. Please try again.');
     btn.disabled = false;
     btn.textContent = 'Delete';
+  }
+}
+
+// ===== Delete All Photos =====
+async function handleDeleteAll() {
+  const count = photos.length;
+
+  if (count === 0) {
+    alert('No photos to delete.');
+    return;
+  }
+
+  const confirmText = `Are you sure you want to delete ALL ${count} photos?\n\nThis will permanently delete all photos and videos.\n\nType "DELETE ALL" to confirm:`;
+  const userInput = prompt(confirmText);
+
+  if (userInput !== 'DELETE ALL') {
+    return;
+  }
+
+  deleteAllBtn.disabled = true;
+  deleteAllBtn.textContent = 'Deleting all...';
+
+  try {
+    const adminToken = sessionStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE}/api/admin/delete-all`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(`Successfully deleted ${data.deletedCount} photos.`);
+
+      // Reload everything
+      loadPhotos();
+      loadStats();
+    } else {
+      const data = await response.json();
+      alert(`Failed to delete all photos: ${data.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Delete all error:', error);
+    alert('Failed to delete all photos. Please try again.');
+  } finally {
+    deleteAllBtn.disabled = false;
+    deleteAllBtn.textContent = 'Delete All Photos';
   }
 }
 

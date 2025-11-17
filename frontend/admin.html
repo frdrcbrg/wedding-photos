@@ -108,10 +108,31 @@
       cursor: pointer;
       font-weight: 500;
       float: right;
+      margin-left: 10px;
     }
 
     .logout-btn:hover {
       background: var(--main-color-dark);
+    }
+
+    .delete-all-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      float: right;
+    }
+
+    .delete-all-btn:hover {
+      background: #c82333;
+    }
+
+    .delete-all-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
 
     .stats-grid {
@@ -170,6 +191,7 @@
     <div class="admin-container">
       <div class="admin-header">
         <button class="logout-btn" id="logoutBtn">Logout</button>
+        <button class="delete-all-btn" id="deleteAllBtn">Delete All Photos</button>
         <h1>Admin Dashboard</h1>
         <p>Manage uploaded photos and videos</p>
 

@@ -248,6 +248,34 @@ app.delete('/api/admin/delete/:id', async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/admin/delete-all
+ * Delete all photos/videos
+ */
+app.delete('/api/admin/delete-all', async (req, res) => {
+  try {
+    // Verify admin authorization
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer token
+
+    if (!token || token !== ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Delete all uploads
+    const deletedCount = await dbOps.deleteAllUploads();
+
+    res.json({
+      success: true,
+      deletedCount: deletedCount,
+      message: 'All photos deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting all photos:', error);
+    res.status(500).json({ error: 'Failed to delete all photos' });
+  }
+});
+
 // Serve frontend for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));

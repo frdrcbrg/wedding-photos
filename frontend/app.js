@@ -361,6 +361,27 @@ function openLightbox(photoIndex) {
 
   lightbox.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+
+  // Preload next and previous images for faster navigation
+  preloadAdjacentImages(photoIndex);
+}
+
+// Preload next and previous images
+function preloadAdjacentImages(currentIndex) {
+  const nextIndex = (currentIndex + 1) % currentPhotos.length;
+  const prevIndex = currentIndex === 0 ? currentPhotos.length - 1 : currentIndex - 1;
+
+  // Preload next image
+  if (currentPhotos[nextIndex] && currentPhotos[nextIndex].file_type === 'photo') {
+    const nextImg = new Image();
+    nextImg.src = currentPhotos[nextIndex].s3_url;
+  }
+
+  // Preload previous image
+  if (currentPhotos[prevIndex] && currentPhotos[prevIndex].file_type === 'photo') {
+    const prevImg = new Image();
+    prevImg.src = currentPhotos[prevIndex].s3_url;
+  }
 }
 
 function closeLightboxModal() {

@@ -1,0 +1,396 @@
+// ===== Configuration =====
+const API_BASE = window.location.origin;
+
+// ===== DOM Elements =====
+const accessModal = document.getElementById('accessModal');
+const mainContent = document.getElementById('mainContent');
+const accessForm = document.getElementById('accessForm');
+const accessCodeInput = document.getElementById('accessCodeInput');
+const accessError = document.getElementById('accessError');
+
+const uploadForm = document.getElementById('uploadForm');
+const fileInput = document.getElementById('fileInput');
+const fileNames = document.getElementById('fileNames');
+const guestName = document.getElementById('guestName');
+const guestMessage = document.getElementById('guestMessage');
+const uploadButton = document.getElementById('uploadButton');
+const uploadProgress = document.getElementById('uploadProgress');
+const progressFill = document.getElementById('progressFill');
+const uploadStatus = document.getElementById('uploadStatus');
+
+const gallery = document.getElementById('gallery');
+const lightbox = document.getElementById('lightbox');
+const lightboxImage = document.getElementById('lightboxImage');
+const lightboxVideo = document.getElementById('lightboxVideo');
+const lightboxName = document.getElementById('lightboxName');
+const lightboxMessage = document.getElementById('lightboxMessage');
+const lightboxDate = document.getElementById('lightboxDate');
+const closeLightbox = document.getElementById('closeLightbox');
+
+const totalUploads = document.getElementById('totalUploads');
+const photoCount = document.getElementById('photoCount');
+const videoCount = document.getElementById('videoCount');
+
+// ===== State =====
+let isAuthenticated = false;
+
+// ===== Initialization =====
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if already authenticated
+  const savedCode = sessionStorage.getItem('accessCode');
+  if (savedCode) {
+    verifyAccess(savedCode, true);
+  }
+
+  // Event listeners
+  accessForm.addEventListener('submit', handleAccessSubmit);
+  uploadForm.addEventListener('submit', handleUploadSubmit);
+  fileInput.addEventListener('change', handleFileSelect);
+  closeLightbox.addEventListener('click', closeLightboxModal);
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightboxModal();
+  });
+});
+
+// ===== Access Control =====
+async function handleAccessSubmit(e) {
+  e.preventDefault();
+  const code = accessCodeInput.value.trim();
+  await verifyAccess(code);
+}
+
+async function verifyAccess(code, silent = false) {
+  try {
+    const response = await fetch(`${API_BASE}/api/access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Access granted
+      isAuthenticated = true;
+      sessionStorage.setItem('accessCode', code);
+      accessModal.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+
+      // Load content
+      loadGallery();
+      loadStats();
+
+      // Refresh gallery every 30 seconds
+      setInterval(() => {
+        loadGallery();
+        loadStats();
+      }, 30000);
+    } else {
+      if (!silent) {
+        accessError.textContent = data.error || 'Invalid access code';
+        accessCodeInput.value = '';
+        accessCodeInput.focus();
+      }
+    }
+  } catch (error) {
+    console.error('Access verification error:', error);
+    if (!silent) {
+      accessError.textContent = 'Connection error. Please try again.';
+    }
+  }
+}
+
+// ===== File Selection =====
+function handleFileSelect(e) {
+  const files = Array.from(e.target.files);
+
+  if (files.length === 0) {
+    fileNames.textContent = '';
+    return;
+  }
+
+  if (files.length === 1) {
+    fileNames.textContent = `Selected: ${files[0].name}`;
+  } else {
+    fileNames.textContent = `Selected: ${files.length} files`;
+  }
+}
+
+// ===== Upload Handling =====
+async function handleUploadSubmit(e) {
+  e.preventDefault();
+
+  const files = Array.from(fileInput.files);
+  if (files.length === 0) {
+    alert('Please select at least one file to upload');
+    return;
+  }
+
+  // Validate file sizes (max 100MB per file)
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  const oversizedFiles = files.filter(file => file.size > maxSize);
+  if (oversizedFiles.length > 0) {
+    alert('Some files are too large. Maximum file size is 100MB.');
+    return;
+  }
+
+  // Disable form
+  uploadButton.disabled = true;
+  uploadProgress.classList.remove('hidden');
+  progressFill.style.width = '0%';
+
+  try {
+    const totalFiles = files.length;
+    let completedFiles = 0;
+
+    for (const file of files) {
+      uploadStatus.textContent = `Uploading ${completedFiles + 1} of ${totalFiles}...`;
+
+      await uploadFile(file);
+
+      completedFiles++;
+      const progress = (completedFiles / totalFiles) * 100;
+      progressFill.style.width = `${progress}%`;
+    }
+
+    // Success!
+    uploadStatus.textContent = '✨ Upload complete! Thank you for sharing.';
+    progressFill.style.width = '100%';
+
+    // Reset form
+    setTimeout(() => {
+      uploadForm.reset();
+      fileNames.textContent = '';
+      uploadProgress.classList.add('hidden');
+      uploadButton.disabled = false;
+
+      // Reload gallery
+      loadGallery();
+      loadStats();
+    }, 2000);
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    uploadStatus.textContent = '❌ Upload failed. Please try again.';
+    uploadButton.disabled = false;
+
+    setTimeout(() => {
+      uploadProgress.classList.add('hidden');
+    }, 3000);
+  }
+}
+
+async function uploadFile(file) {
+  // Step 1: Get presigned URL from backend
+  const urlResponse = await fetch(`${API_BASE}/api/upload-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type,
+    }),
+  });
+
+  if (!urlResponse.ok) {
+    const error = await urlResponse.json();
+    throw new Error(error.error || 'Failed to get upload URL');
+  }
+
+  const { uploadUrl, s3Key, publicUrl, fileType } = await urlResponse.json();
+
+  // Step 2: Upload file directly to S3
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error('Failed to upload file to storage');
+  }
+
+  // Step 3: Confirm upload with backend
+  const confirmResponse = await fetch(`${API_BASE}/api/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.name,
+      s3Key: s3Key,
+      s3Url: publicUrl,
+      fileType: fileType,
+      uploadedBy: guestName.value.trim() || null,
+      message: guestMessage.value.trim() || null,
+    }),
+  });
+
+  if (!confirmResponse.ok) {
+    throw new Error('Failed to confirm upload');
+  }
+
+  return await confirmResponse.json();
+}
+
+// ===== Gallery Loading =====
+async function loadGallery() {
+  try {
+    const response = await fetch(`${API_BASE}/api/photos`);
+
+    if (!response.ok) {
+      throw new Error('Failed to load gallery');
+    }
+
+    const photos = await response.json();
+
+    if (photos.length === 0) {
+      gallery.innerHTML = `
+        <div class="empty-gallery">
+          <p>No memories shared yet</p>
+          <p style="font-size: 0.9em; margin-top: 10px;">Be the first to share a special moment!</p>
+        </div>
+      `;
+      return;
+    }
+
+    gallery.innerHTML = photos.map(photo => createGalleryItem(photo)).join('');
+
+    // Add click listeners
+    document.querySelectorAll('.gallery-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const photoId = item.dataset.id;
+        const photo = photos.find(p => p.id == photoId);
+        openLightbox(photo);
+      });
+    });
+
+  } catch (error) {
+    console.error('Gallery loading error:', error);
+    gallery.innerHTML = `
+      <div class="loading">
+        Failed to load gallery. Please refresh the page.
+      </div>
+    `;
+  }
+}
+
+function createGalleryItem(photo) {
+  const isVideo = photo.file_type === 'video';
+  const mediaTag = isVideo
+    ? `<video src="${photo.s3_url}" muted></video>`
+    : `<img src="${photo.s3_url}" alt="${photo.filename}">`;
+
+  const videoIndicator = isVideo ? '<div class="video-indicator">▶</div>' : '';
+
+  const displayName = photo.uploaded_by || 'Anonymous';
+  const displayMessage = photo.message || '';
+  const displayDate = formatDate(photo.uploaded_at);
+
+  return `
+    <div class="gallery-item" data-id="${photo.id}">
+      ${videoIndicator}
+      ${mediaTag}
+      <div class="gallery-item-info">
+        <div class="gallery-item-name">${escapeHtml(displayName)}</div>
+        ${displayMessage ? `<div class="gallery-item-message">${escapeHtml(displayMessage)}</div>` : ''}
+        <div class="gallery-item-date">${displayDate}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== Stats Loading =====
+async function loadStats() {
+  try {
+    const response = await fetch(`${API_BASE}/api/stats`);
+
+    if (!response.ok) {
+      throw new Error('Failed to load stats');
+    }
+
+    const stats = await response.json();
+
+    totalUploads.textContent = stats.total_uploads || 0;
+    photoCount.textContent = stats.photo_count || 0;
+    videoCount.textContent = stats.video_count || 0;
+
+  } catch (error) {
+    console.error('Stats loading error:', error);
+  }
+}
+
+// ===== Lightbox =====
+function openLightbox(photo) {
+  const isVideo = photo.file_type === 'video';
+
+  if (isVideo) {
+    lightboxImage.style.display = 'none';
+    lightboxVideo.style.display = 'block';
+    lightboxVideo.src = photo.s3_url;
+  } else {
+    lightboxVideo.style.display = 'none';
+    lightboxImage.style.display = 'block';
+    lightboxImage.src = photo.s3_url;
+  }
+
+  lightboxName.textContent = photo.uploaded_by || 'Anonymous';
+  lightboxMessage.textContent = photo.message || '';
+  lightboxDate.textContent = formatDate(photo.uploaded_at);
+
+  // Hide message if empty
+  if (!photo.message) {
+    lightboxMessage.style.display = 'none';
+  } else {
+    lightboxMessage.style.display = 'block';
+  }
+
+  lightbox.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightboxModal() {
+  lightbox.classList.add('hidden');
+  lightboxVideo.pause();
+  lightboxVideo.src = '';
+  document.body.style.overflow = 'auto';
+}
+
+// Close lightbox with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+    closeLightboxModal();
+  }
+});
+
+// ===== Utility Functions =====
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ===== Service Worker (Optional - for offline support) =====
+if ('serviceWorker' in navigator) {
+  // Uncomment to enable service worker
+  // navigator.serviceWorker.register('/sw.js');
+}

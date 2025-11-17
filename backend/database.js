@@ -24,8 +24,8 @@ const dbOps = {
   // Insert new upload
   insertUpload: async (data) => {
     const sql = `
-      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message, thumbnail_key)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id
     `;
 
@@ -36,9 +36,20 @@ const dbOps = {
       data.file_type,
       data.uploaded_by || null,
       data.message || null,
+      data.thumbnail_key || null,
     ]);
 
     return { lastInsertRowid: result.rows[0].id };
+  },
+
+  // Update thumbnail key for an upload
+  updateThumbnailKey: async (id, thumbnailKey) => {
+    const sql = `
+      UPDATE uploads
+      SET thumbnail_key = $1
+      WHERE id = $2
+    `;
+    await pool.query(sql, [thumbnailKey, id]);
   },
 
   // Get all uploads

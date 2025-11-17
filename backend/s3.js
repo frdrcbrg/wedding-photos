@@ -195,3 +195,5 @@ const s3Ops = {
 };
 
 module.exports = s3Ops;
+module.exports.s3Client = s3Client;
+module.exports.BUCKET_NAME = BUCKET_NAME;

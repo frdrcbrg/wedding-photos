@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const dbOps = require('./database');
 const s3Ops = require('./s3');
+const { generateThumbnail } = require('./thumbnail');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -101,9 +102,25 @@ app.post('/api/confirm', async (req, res) => {
       message: message,
     });
 
+    const uploadId = result.lastInsertRowid;
+
+    // Generate thumbnail asynchronously (don't block response)
+    if (fileType === 'photo') {
+      generateThumbnail(s3Url, s3Key)
+        .then(async (thumbnailKey) => {
+          if (thumbnailKey) {
+            await dbOps.updateThumbnailKey(uploadId, thumbnailKey);
+            console.log(`Thumbnail generated for upload ${uploadId}`);
+          }
+        })
+        .catch((error) => {
+          console.error(`Failed to generate thumbnail for upload ${uploadId}:`, error);
+        });
+    }
+
     res.json({
       success: true,
-      uploadId: result.lastInsertRowid,
+      uploadId: uploadId,
       message: 'Upload confirmed successfully',
     });
   } catch (error) {
@@ -120,14 +137,27 @@ app.get('/api/photos', async (req, res) => {
   try {
     const uploads = await dbOps.getAllUploads();
 
-    // Generate fresh presigned URLs for each upload
+    // Generate fresh presigned URLs for each upload (full image and thumbnail)
     const uploadsWithFreshUrls = await Promise.all(
       uploads.map(async (upload) => {
         try {
           const freshUrl = await s3Ops.getPresignedDownloadUrl(upload.s3_key);
+
+          // Generate thumbnail URL if thumbnail exists
+          let thumbnailUrl = freshUrl; // Default to full image
+          if (upload.thumbnail_key) {
+            try {
+              thumbnailUrl = await s3Ops.getPresignedDownloadUrl(upload.thumbnail_key);
+            } catch (thumbError) {
+              console.error(`Error generating thumbnail URL for ${upload.thumbnail_key}:`, thumbError);
+              // Fall back to full image
+            }
+          }
+
           return {
             ...upload,
-            s3_url: freshUrl, // Replace with fresh presigned URL
+            s3_url: freshUrl, // Full image URL
+            thumbnail_url: thumbnailUrl, // Thumbnail URL (or full image if no thumbnail)
           };
         } catch (error) {
           console.error(`Error generating URL for ${upload.s3_key}:`, error);

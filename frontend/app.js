@@ -283,9 +283,13 @@ async function loadGallery() {
 
 function createGalleryItem(photo) {
   const isVideo = photo.file_type === 'video';
+
+  // Use thumbnail URL for gallery, full URL for lightbox
+  const thumbnailUrl = photo.thumbnail_url || photo.s3_url;
+
   const mediaTag = isVideo
-    ? `<video src="${photo.s3_url}" muted></video>`
-    : `<img src="${photo.s3_url}" alt="${photo.filename}">`;
+    ? `<video src="${thumbnailUrl}" muted></video>`
+    : `<img src="${thumbnailUrl}" alt="${photo.filename}" loading="lazy">`;
 
   const videoIndicator = isVideo ? '<div class="video-indicator">▶</div>' : '';
 

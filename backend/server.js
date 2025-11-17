@@ -114,12 +114,29 @@ app.post('/api/confirm', (req, res) => {
 
 /**
  * GET /api/photos
- * Get all uploaded photos and videos
+ * Get all uploaded photos and videos with fresh presigned URLs
  */
-app.get('/api/photos', (req, res) => {
+app.get('/api/photos', async (req, res) => {
   try {
     const uploads = dbOps.getAllUploads();
-    res.json(uploads);
+
+    // Generate fresh presigned URLs for each upload
+    const uploadsWithFreshUrls = await Promise.all(
+      uploads.map(async (upload) => {
+        try {
+          const freshUrl = await s3Ops.getPresignedDownloadUrl(upload.s3_key);
+          return {
+            ...upload,
+            s3_url: freshUrl, // Replace with fresh presigned URL
+          };
+        } catch (error) {
+          console.error(`Error generating URL for ${upload.s3_key}:`, error);
+          return upload; // Return original if URL generation fails
+        }
+      })
+    );
+
+    res.json(uploadsWithFreshUrls);
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos' });

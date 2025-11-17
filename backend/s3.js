@@ -142,19 +142,16 @@ const s3Ops = {
       // ACL: 'public-read', // Uncomment if you want files to be publicly readable
     });
 
-    // Generate presigned URL (valid for 5 minutes)
+    // Generate presigned URL for upload (valid for 5 minutes)
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-    // Generate public URL (adjust based on your S3 configuration)
-    let publicUrl;
-    if (process.env.S3_ENDPOINT) {
-      // For DigitalOcean Spaces or custom S3 endpoint
-      const endpointUrl = process.env.S3_ENDPOINT.replace('https://', '');
-      publicUrl = `https://${BUCKET_NAME}.${endpointUrl}/${s3Key}`;
-    } else {
-      // For AWS S3
-      publicUrl = `https://${BUCKET_NAME}.s3.${process.env.S3_REGION}.amazonaws.com/${s3Key}`;
-    }
+    // Generate presigned URL for download (valid for 7 days)
+    // This allows viewing without making the bucket public
+    const getCommand = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+    });
+    const publicUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 7 * 24 * 60 * 60 });
 
     return {
       uploadUrl,

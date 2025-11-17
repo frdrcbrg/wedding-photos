@@ -24,8 +24,8 @@ const dbOps = {
   // Insert new upload
   insertUpload: async (data) => {
     const sql = `
-      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message, thumbnail_key)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message, thumbnail_key, taken_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
     `;
 
@@ -37,6 +37,7 @@ const dbOps = {
       data.uploaded_by || null,
       data.message || null,
       data.thumbnail_key || null,
+      data.taken_at || null,
     ]);
 
     return { lastInsertRowid: result.rows[0].id };
@@ -56,7 +57,7 @@ const dbOps = {
   getAllUploads: async () => {
     const sql = `
       SELECT * FROM uploads
-      ORDER BY uploaded_at DESC
+      ORDER BY COALESCE(taken_at, uploaded_at) DESC
     `;
     const result = await pool.query(sql);
     return result.rows;

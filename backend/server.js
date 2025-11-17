@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios');
+const exifParser = require('exif-parser');
 require('dotenv').config();
 
 const dbOps = require('./database');
@@ -27,6 +29,57 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
   await s3Ops.testConnection();
   console.log('\n');
 })();
+
+// ===== Helper Functions =====
+
+/**
+ * Extract EXIF date from image file
+ * Returns ISO timestamp or null if not available
+ */
+async function extractExifDate(s3Url, fileType) {
+  // Only process images, not videos
+  if (fileType !== 'photo') {
+    return null;
+  }
+
+  try {
+    // Download first 64KB of file (EXIF data is in header)
+    const response = await axios.get(s3Url, {
+      responseType: 'arraybuffer',
+      headers: {
+        'Range': 'bytes=0-65535' // First 64KB should contain EXIF
+      },
+      timeout: 10000,
+    });
+
+    const buffer = Buffer.from(response.data);
+
+    // Parse EXIF data
+    const parser = exifParser.create(buffer);
+    const result = parser.parse();
+
+    // Try to get the date photo was taken
+    // DateTimeOriginal is when the photo was taken
+    // CreateDate is when the file was created
+    // ModifyDate is when the file was modified
+    const timestamp = result.tags?.DateTimeOriginal ||
+                     result.tags?.CreateDate ||
+                     result.tags?.ModifyDate;
+
+    if (timestamp) {
+      // EXIF timestamps are in seconds, convert to milliseconds
+      const date = new Date(timestamp * 1000);
+      console.log(`📅 EXIF date found: ${date.toISOString()}`);
+      return date.toISOString();
+    }
+
+    console.log('⚠️  No EXIF date found in image');
+    return null;
+  } catch (error) {
+    console.error('Error extracting EXIF date:', error.message);
+    return null;
+  }
+}
 
 // ===== API Routes =====
 
@@ -93,6 +146,9 @@ app.post('/api/confirm', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Extract EXIF date from the uploaded file
+    const takenAt = await extractExifDate(s3Url, fileType);
+
     // Insert into database
     const result = await dbOps.insertUpload({
       filename,
@@ -101,6 +157,7 @@ app.post('/api/confirm', async (req, res) => {
       file_type: fileType,
       uploaded_by: uploadedBy,
       message: message,
+      taken_at: takenAt,
     });
 
     const uploadId = result.lastInsertRowid;

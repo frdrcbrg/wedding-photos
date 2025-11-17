@@ -58,18 +58,25 @@ async function initializeDatabase() {
         uploaded_by TEXT,
         message TEXT,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        thumbnail_key TEXT
+        thumbnail_key TEXT,
+        taken_at TIMESTAMP
       )
     `;
 
-    // Add thumbnail_key column if it doesn't exist (for existing databases)
+    // Add columns if they don't exist (for existing databases)
     const addThumbnailColumnQuery = `
       ALTER TABLE uploads
       ADD COLUMN IF NOT EXISTS thumbnail_key TEXT
     `;
 
+    const addTakenAtColumnQuery = `
+      ALTER TABLE uploads
+      ADD COLUMN IF NOT EXISTS taken_at TIMESTAMP
+    `;
+
     await appClient.query(createTableQuery);
     await appClient.query(addThumbnailColumnQuery);
+    await appClient.query(addTakenAtColumnQuery);
     console.log('✅ Table "uploads" initialized');
 
     // Check current record count

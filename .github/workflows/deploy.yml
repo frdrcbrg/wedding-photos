@@ -44,35 +44,41 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+  # Deployment step disabled - deploy manually on server:
+  # cd /opt/docker/wedding-photos
+  # git pull
+  # docker pull ghcr.io/frdrcbrg/wedding-photos:latest
+  # docker compose up -d
 
-    steps:
-      - name: Deploy to server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          IMAGE_URL: ghcr.io/${{ github.repository }}:latest
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: IMAGE_URL
-          script: |
-            cd /opt/docker/wedding-photos
-
-            # Pull latest code (for docker-compose.yml)
-            git pull
-
-            # Pull the latest image (public registry, no login needed)
-            docker pull $IMAGE_URL
-
-            # Restart the container with new image
-            docker compose down
-            docker compose up -d
-
-            # Cleanup old images
-            docker image prune -af
-
-            echo "Deployment completed successfully!"
+  # deploy:
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #
+  #   steps:
+  #     - name: Deploy to server via SSH
+  #       uses: appleboy/ssh-action@v1.0.3
+  #       env:
+  #         IMAGE_URL: ghcr.io/${{ github.repository }}:latest
+  #       with:
+  #         host: ${{ secrets.SERVER_HOST }}
+  #         username: ${{ secrets.SERVER_USER }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         envs: IMAGE_URL
+  #         script: |
+  #           cd /opt/docker/wedding-photos
+  #
+  #           # Pull latest code (for docker-compose.yml)
+  #           git pull
+  #
+  #           # Pull the latest image (public registry, no login needed)
+  #           docker pull $IMAGE_URL
+  #
+  #           # Restart the container with new image
+  #           docker compose down
+  #           docker compose up -d
+  #
+  #           # Cleanup old images
+  #           docker image prune -af
+  #
+  #           echo "Deployment completed successfully!"

@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 4. Fixed presigned URLs: Generate fresh presigned download URLs (7-day expiry) on `/api/photos` requests
 5. Migrated from SQLite to PostgreSQL with async operations
 6. Added S3 preflight check on startup (logs to `backend/s3-preflight.log`)
+7. Added automatic database initialization: `init-db.js` creates database and tables on startup
+8. Added swipe navigation to photo lightbox with keyboard and touch support
 
 **Environment Setup:**
 - `.env` must include: PostgreSQL credentials, S3 credentials, ACCESS_CODE
@@ -29,6 +31,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - App connects to external `db` PostgreSQL container on `caddy` network
 - No local database volume needed (uses external PostgreSQL)
 - Presigned URLs refresh on every gallery fetch to prevent expiration issues
+- Database is automatically initialized on container startup via `init-db.js` script
+- If database doesn't exist, it will be created automatically (requires CREATE DATABASE permission)
 
 ## Project Overview
 
@@ -50,6 +54,9 @@ A minimalistic winter-themed wedding photo sharing web application. Guests can u
 # Install dependencies
 cd backend
 npm install
+
+# Initialize database (creates database and tables if needed)
+npm run init-db
 
 # Run development server with auto-reload
 npm run dev

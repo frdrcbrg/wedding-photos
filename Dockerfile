@@ -23,8 +23,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 
-# Create directory for SQLite database with proper permissions
-RUN mkdir -p /app/backend && \
+# Make startup script executable
+RUN chmod +x /app/backend/start.sh && \
     chown -R node:node /app
 
 # Switch to non-root user
@@ -40,5 +40,5 @@ WORKDIR /app/backend
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "server.js"]
+# Start the application using startup script
+CMD ["sh", "start.sh"]

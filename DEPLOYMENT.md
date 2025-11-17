@@ -146,20 +146,47 @@ Complete step-by-step guide for deploying your Winter Wedding Photo App.
    ```env
    PORT=3000
    ACCESS_CODE=WINTER2025
+
+   # PostgreSQL Configuration
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=your_user
+   POSTGRES_PASSWORD=your_password
+   POSTGRES_DB=wedding_photos
+
+   # S3 Configuration
    S3_ACCESS_KEY_ID=your_key
    S3_SECRET_ACCESS_KEY=your_secret
    S3_BUCKET_NAME=your_bucket
    S3_REGION=us-east-1
    ```
 
-3. **Install and run:**
+3. **Setup PostgreSQL (if not already installed):**
+   ```bash
+   # Install PostgreSQL
+   sudo apt install postgresql postgresql-contrib
+
+   # Create database and user
+   sudo -u postgres psql
+   CREATE DATABASE wedding_photos;
+   CREATE USER your_user WITH PASSWORD 'your_password';
+   GRANT ALL PRIVILEGES ON DATABASE wedding_photos TO your_user;
+   \q
+   ```
+
+4. **Install and run:**
    ```bash
    cd backend
    npm install
+
+   # Initialize database (creates database and tables if needed)
+   npm run init-db
+
+   # Start the application
    npm start
    ```
 
-4. **Test:**
+5. **Test:**
    - Open `http://localhost:3000`
    - Enter access code: `WINTER2025`
    - Try uploading a test image

@@ -10,32 +10,14 @@ const pool = new Pool({
   database: process.env.POSTGRES_DB,
 });
 
-// Create uploads table
-const createTable = async () => {
-  const sql = `
-    CREATE TABLE IF NOT EXISTS uploads (
-      id SERIAL PRIMARY KEY,
-      filename TEXT NOT NULL,
-      s3_key TEXT NOT NULL,
-      s3_url TEXT NOT NULL,
-      file_type TEXT NOT NULL,
-      uploaded_by TEXT,
-      message TEXT,
-      uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
-
-  try {
-    await pool.query(sql);
-    console.log('✅ Database table initialized');
-  } catch (error) {
-    console.error('❌ Error creating table:', error);
-    throw error;
+// Test database connection on startup
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Database connection error:', err.message);
+  } else {
+    console.log('✅ Database connected successfully');
   }
-};
-
-// Initialize database
-createTable();
+});
 
 // Database operations
 const dbOps = {

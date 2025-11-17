@@ -2,6 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Recent Session Summary (2025-11-17)
+
+**Working Configuration:**
+- Deployed on DigitalOcean droplet
+- Using Docker Compose V2 (use `docker compose` not `docker-compose`)
+- Connected to existing PostgreSQL database via `caddy` network
+- DigitalOcean Spaces for storage (bucket: `comfyoutput`, region: `fra1`)
+- Caddy reverse proxy on `caddy` network
+
+**Key Fixes Applied:**
+1. Fixed Docker npm build: Changed `npm ci` to `npm install` (no package-lock.json)
+2. Fixed S3 endpoint: Must use region endpoint only (`https://fra1.digitaloceanspaces.com`), not bucket URL
+3. Fixed CORS: Added `x-amz-*` headers and HEAD method for AWS SDK v3 compatibility
+4. Fixed presigned URLs: Generate fresh presigned download URLs (7-day expiry) on `/api/photos` requests
+5. Migrated from SQLite to PostgreSQL with async operations
+6. Added S3 preflight check on startup (logs to `backend/s3-preflight.log`)
+
+**Environment Setup:**
+- `.env` must include: PostgreSQL credentials, S3 credentials, ACCESS_CODE
+- S3_ENDPOINT format: `https://fra1.digitaloceanspaces.com` (region only)
+- POSTGRES_HOST: `db` (connects to external PostgreSQL container)
+
+**Important Notes:**
+- Docker Compose V2 syntax: `docker compose` (not `docker-compose`)
+- App connects to external `db` PostgreSQL container on `caddy` network
+- No local database volume needed (uses external PostgreSQL)
+- Presigned URLs refresh on every gallery fetch to prevent expiration issues
+
 ## Project Overview
 
 A minimalistic winter-themed wedding photo sharing web application. Guests can upload photos/videos via access code, with direct S3 storage and no complex authentication. Built with vanilla JavaScript frontend and Node.js/Express backend.

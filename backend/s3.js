@@ -10,7 +10,8 @@ const s3Client = new S3Client({
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
-  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true', // Required for some S3-compatible services
+  // Note: forcePathStyle should be false for DigitalOcean Spaces
+  forcePathStyle: false,
 });
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;

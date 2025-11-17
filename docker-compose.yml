@@ -5,8 +5,8 @@ services:
     build: .
     container_name: winter-wedding-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -26,12 +26,12 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - wedding-network
+      - caddy
 
 volumes:
   wedding-data:
     driver: local
 
 networks:
-  wedding-network:
-    driver: bridge
+  caddy:
+    external: true

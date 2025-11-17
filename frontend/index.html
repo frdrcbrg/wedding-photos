@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Share your Winter Wedding memories">
+  <title>Winter Wedding | Share Your Memories</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Snowflakes Background -->
+  <div class="snowflakes" aria-hidden="true">
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+    <div class="snowflake">❅</div>
+    <div class="snowflake">❆</div>
+  </div>
+
+  <!-- Access Code Modal -->
+  <div id="accessModal" class="modal">
+    <div class="modal-content frosted">
+      <div class="modal-header">
+        <h1>❄️</h1>
+        <h2>Winter Wedding</h2>
+        <p>Please enter the access code to view and share photos</p>
+      </div>
+      <form id="accessForm">
+        <input
+          type="text"
+          id="accessCodeInput"
+          placeholder="Enter access code"
+          autocomplete="off"
+          required
+        >
+        <button type="submit" class="btn-primary">Enter</button>
+        <p id="accessError" class="error-message"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="hidden">
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="header-content">
+          <h1 class="title">Winter Wedding</h1>
+          <p class="subtitle">Share your magical moments</p>
+        </div>
+        <div id="stats" class="stats">
+          <div class="stat-item">
+            <span class="stat-number" id="totalUploads">0</span>
+            <span class="stat-label">memories</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="photoCount">0</span>
+            <span class="stat-label">photos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="videoCount">0</span>
+            <span class="stat-label">videos</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Upload Section -->
+    <section class="upload-section">
+      <div class="container">
+        <div class="upload-card frosted">
+          <h3>Share a Memory</h3>
+          <form id="uploadForm">
+            <div class="form-group">
+              <label for="guestName">Your Name (Optional)</label>
+              <input
+                type="text"
+                id="guestName"
+                placeholder="e.g., Sarah & John"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="guestMessage">Message (Optional)</label>
+              <textarea
+                id="guestMessage"
+                rows="3"
+                placeholder="Share a special message or memory..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="file-input-label">
+                <input
+                  type="file"
+                  id="fileInput"
+                  accept="image/*,video/*"
+                  multiple
+                  required
+                >
+                <span class="file-input-button">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  Choose Photos or Videos
+                </span>
+              </label>
+              <div id="fileNames" class="file-names"></div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="uploadButton">
+              Upload Memories
+            </button>
+
+            <div id="uploadProgress" class="upload-progress hidden">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <p id="uploadStatus">Uploading...</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section class="gallery-section">
+      <div class="container">
+        <h2 class="section-title">Shared Memories</h2>
+        <div id="gallery" class="gallery">
+          <div class="loading">Loading memories...</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox hidden">
+    <button class="lightbox-close" id="closeLightbox">&times;</button>
+    <div class="lightbox-content">
+      <img id="lightboxImage" src="" alt="">
+      <video id="lightboxVideo" controls></video>
+      <div class="lightbox-info">
+        <p id="lightboxName" class="lightbox-name"></p>
+        <p id="lightboxMessage" class="lightbox-message"></p>
+        <p id="lightboxDate" class="lightbox-date"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

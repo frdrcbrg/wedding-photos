@@ -16,9 +16,7 @@ const loadMoreBtn = document.getElementById('loadMoreBtn');
 const lightbox = document.getElementById('lightbox');
 const lightboxImage = document.getElementById('lightboxImage');
 const lightboxVideo = document.getElementById('lightboxVideo');
-const lightboxName = document.getElementById('lightboxName');
-const lightboxMessage = document.getElementById('lightboxMessage');
-const lightboxDate = document.getElementById('lightboxDate');
+const lightboxDownload = document.getElementById('lightboxDownload');
 const closeLightbox = document.getElementById('closeLightbox');
 const lightboxPrev = document.getElementById('lightboxPrev');
 const lightboxNext = document.getElementById('lightboxNext');
@@ -274,21 +272,14 @@ function openLightbox(photoIndex) {
     lightboxImage.style.display = 'none';
     lightboxVideo.style.display = 'block';
     lightboxVideo.src = photo.s3_url;
+    lightboxDownload.href = photo.s3_url;
+    lightboxDownload.download = photo.filename;
   } else {
     lightboxVideo.style.display = 'none';
     lightboxImage.style.display = 'block';
     lightboxImage.src = photo.s3_url;
-  }
-
-  lightboxName.textContent = photo.uploaded_by || 'Anonymous';
-  lightboxMessage.textContent = photo.message || '';
-  lightboxDate.textContent = formatDate(photo.uploaded_at);
-
-  // Hide message if empty
-  if (!photo.message) {
-    lightboxMessage.style.display = 'none';
-  } else {
-    lightboxMessage.style.display = 'block';
+    lightboxDownload.href = photo.s3_url;
+    lightboxDownload.download = photo.filename;
   }
 
   lightbox.classList.remove('hidden');

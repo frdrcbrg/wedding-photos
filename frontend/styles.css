@@ -181,7 +181,7 @@ body {
 }
 
 .wedding-logo {
-  max-width: 400px;
+  width: 400px;
   height: auto;
   opacity: 0.9;
 }
@@ -651,7 +651,7 @@ body {
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
   .wedding-logo {
-    max-width: 280px;
+    width: 280px;
   }
 
   .title {

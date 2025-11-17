@@ -26,6 +26,8 @@ const lightboxName = document.getElementById('lightboxName');
 const lightboxMessage = document.getElementById('lightboxMessage');
 const lightboxDate = document.getElementById('lightboxDate');
 const closeLightbox = document.getElementById('closeLightbox');
+const lightboxPrev = document.getElementById('lightboxPrev');
+const lightboxNext = document.getElementById('lightboxNext');
 
 const totalUploads = document.getElementById('totalUploads');
 const photoCount = document.getElementById('photoCount');
@@ -33,6 +35,8 @@ const videoCount = document.getElementById('videoCount');
 
 // ===== State =====
 let isAuthenticated = false;
+let currentPhotos = [];
+let currentPhotoIndex = -1;
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,6 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
   uploadForm.addEventListener('submit', handleUploadSubmit);
   fileInput.addEventListener('change', handleFileSelect);
   closeLightbox.addEventListener('click', closeLightboxModal);
+  lightboxPrev.addEventListener('click', (e) => {
+    e.stopPropagation();
+    previousPhoto();
+  });
+  lightboxNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nextPhoto();
+  });
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox) closeLightboxModal();
   });
@@ -242,6 +254,7 @@ async function loadGallery() {
     }
 
     const photos = await response.json();
+    currentPhotos = photos; // Store for navigation
 
     if (photos.length === 0) {
       gallery.innerHTML = `
@@ -259,8 +272,8 @@ async function loadGallery() {
     document.querySelectorAll('.gallery-item').forEach(item => {
       item.addEventListener('click', () => {
         const photoId = item.dataset.id;
-        const photo = photos.find(p => p.id == photoId);
-        openLightbox(photo);
+        const photoIndex = photos.findIndex(p => p.id == photoId);
+        openLightbox(photoIndex);
       });
     });
 
@@ -320,7 +333,11 @@ async function loadStats() {
 }
 
 // ===== Lightbox =====
-function openLightbox(photo) {
+function openLightbox(photoIndex) {
+  if (photoIndex < 0 || photoIndex >= currentPhotos.length) return;
+
+  currentPhotoIndex = photoIndex;
+  const photo = currentPhotos[photoIndex];
   const isVideo = photo.file_type === 'video';
 
   if (isVideo) {
@@ -353,14 +370,72 @@ function closeLightboxModal() {
   lightboxVideo.pause();
   lightboxVideo.src = '';
   document.body.style.overflow = 'auto';
+  currentPhotoIndex = -1;
 }
 
-// Close lightbox with Escape key
+function navigateToPhoto(direction) {
+  if (currentPhotos.length === 0) return;
+
+  let newIndex = currentPhotoIndex + direction;
+
+  // Wrap around
+  if (newIndex < 0) {
+    newIndex = currentPhotos.length - 1;
+  } else if (newIndex >= currentPhotos.length) {
+    newIndex = 0;
+  }
+
+  openLightbox(newIndex);
+}
+
+function nextPhoto() {
+  navigateToPhoto(1);
+}
+
+function previousPhoto() {
+  navigateToPhoto(-1);
+}
+
+// Keyboard navigation
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+  if (lightbox.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
     closeLightboxModal();
+  } else if (e.key === 'ArrowLeft') {
+    previousPhoto();
+  } else if (e.key === 'ArrowRight') {
+    nextPhoto();
   }
 });
+
+// Touch/Swipe support
+let touchStartX = 0;
+let touchEndX = 0;
+
+lightbox.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+lightbox.addEventListener('touchend', (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+  const swipeThreshold = 50; // Minimum swipe distance in pixels
+  const diff = touchStartX - touchEndX;
+
+  if (Math.abs(diff) > swipeThreshold) {
+    if (diff > 0) {
+      // Swiped left - show next
+      nextPhoto();
+    } else {
+      // Swiped right - show previous
+      previousPhoto();
+    }
+  }
+}
 
 // ===== Utility Functions =====
 function formatDate(dateString) {

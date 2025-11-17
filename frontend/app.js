@@ -8,12 +8,14 @@ const accessForm = document.getElementById('accessForm');
 const accessCodeInput = document.getElementById('accessCodeInput');
 const accessError = document.getElementById('accessError');
 
-const uploadForm = document.getElementById('uploadForm');
+const uploadModal = document.getElementById('uploadModal');
+const uploadDetailsForm = document.getElementById('uploadDetailsForm');
+const uploadModalFileCount = document.getElementById('uploadModalFileCount');
 const fileInput = document.getElementById('fileInput');
-const fileNames = document.getElementById('fileNames');
 const guestName = document.getElementById('guestName');
 const guestMessage = document.getElementById('guestMessage');
-const uploadButton = document.getElementById('uploadButton');
+const startUpload = document.getElementById('startUpload');
+const cancelUpload = document.getElementById('cancelUpload');
 const uploadProgress = document.getElementById('uploadProgress');
 const progressFill = document.getElementById('progressFill');
 const uploadStatus = document.getElementById('uploadStatus');
@@ -37,6 +39,7 @@ const videoCount = document.getElementById('videoCount');
 let isAuthenticated = false;
 let currentPhotos = [];
 let currentPhotoIndex = -1;
+let selectedFiles = [];
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -48,8 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Event listeners
   accessForm.addEventListener('submit', handleAccessSubmit);
-  uploadForm.addEventListener('submit', handleUploadSubmit);
   fileInput.addEventListener('change', handleFileSelect);
+  uploadDetailsForm.addEventListener('submit', handleUploadSubmit);
+  cancelUpload.addEventListener('click', handleCancelUpload);
   closeLightbox.addEventListener('click', closeLightboxModal);
   lightboxPrev.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -111,24 +115,6 @@ function handleFileSelect(e) {
   const files = Array.from(e.target.files);
 
   if (files.length === 0) {
-    fileNames.textContent = '';
-    return;
-  }
-
-  if (files.length === 1) {
-    fileNames.textContent = `Selected: ${files[0].name}`;
-  } else {
-    fileNames.textContent = `Selected: ${files.length} files`;
-  }
-}
-
-// ===== Upload Handling =====
-async function handleUploadSubmit(e) {
-  e.preventDefault();
-
-  const files = Array.from(fileInput.files);
-  if (files.length === 0) {
-    alert('Please select at least one file to upload');
     return;
   }
 
@@ -140,16 +126,45 @@ async function handleUploadSubmit(e) {
     return;
   }
 
+  // Store selected files
+  selectedFiles = files;
+
+  // Show upload modal with file count
+  const fileCount = files.length === 1 ? '1 file selected' : `${files.length} files selected`;
+  uploadModalFileCount.textContent = fileCount;
+  uploadModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function handleCancelUpload() {
+  uploadModal.classList.add('hidden');
+  document.body.style.overflow = 'auto';
+  fileInput.value = '';
+  selectedFiles = [];
+  guestName.value = '';
+  guestMessage.value = '';
+}
+
+// ===== Upload Handling =====
+async function handleUploadSubmit(e) {
+  e.preventDefault();
+
+  if (selectedFiles.length === 0) {
+    alert('No files selected');
+    return;
+  }
+
   // Disable form
-  uploadButton.disabled = true;
+  startUpload.disabled = true;
+  cancelUpload.disabled = true;
   uploadProgress.classList.remove('hidden');
   progressFill.style.width = '0%';
 
   try {
-    const totalFiles = files.length;
+    const totalFiles = selectedFiles.length;
     let completedFiles = 0;
 
-    for (const file of files) {
+    for (const file of selectedFiles) {
       uploadStatus.textContent = `Uploading ${completedFiles + 1} of ${totalFiles}...`;
 
       await uploadFile(file);
@@ -163,12 +178,17 @@ async function handleUploadSubmit(e) {
     uploadStatus.textContent = '✨ Upload complete! Thank you for sharing.';
     progressFill.style.width = '100%';
 
-    // Reset form
+    // Reset and close modal
     setTimeout(() => {
-      uploadForm.reset();
-      fileNames.textContent = '';
+      uploadModal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
       uploadProgress.classList.add('hidden');
-      uploadButton.disabled = false;
+      startUpload.disabled = false;
+      cancelUpload.disabled = false;
+      fileInput.value = '';
+      selectedFiles = [];
+      guestName.value = '';
+      guestMessage.value = '';
 
       // Reload gallery
       loadGallery();
@@ -178,7 +198,8 @@ async function handleUploadSubmit(e) {
   } catch (error) {
     console.error('Upload error:', error);
     uploadStatus.textContent = '❌ Upload failed. Please try again.';
-    uploadButton.disabled = false;
+    startUpload.disabled = false;
+    cancelUpload.disabled = false;
 
     setTimeout(() => {
       uploadProgress.classList.add('hidden');
@@ -250,20 +271,38 @@ async function loadGallery() {
     const photos = await response.json();
     currentPhotos = photos; // Store for navigation
 
+    // Create camera tile as first item
+    const cameraTile = `
+      <div class="gallery-item camera-tile" id="cameraTile">
+        <div class="camera-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          <p>Add Photos</p>
+        </div>
+      </div>
+    `;
+
     if (photos.length === 0) {
-      gallery.innerHTML = `
-        <div class="empty-gallery">
+      gallery.innerHTML = cameraTile + `
+        <div class="empty-gallery" style="grid-column: 1 / -1;">
           <p>No memories shared yet</p>
           <p style="font-size: 0.9em; margin-top: 10px;">Be the first to share a special moment!</p>
         </div>
       `;
-      return;
+    } else {
+      gallery.innerHTML = cameraTile + photos.map(photo => createGalleryItem(photo)).join('');
     }
 
-    gallery.innerHTML = photos.map(photo => createGalleryItem(photo)).join('');
+    // Add camera tile click listener
+    const cameraTileEl = document.getElementById('cameraTile');
+    cameraTileEl.addEventListener('click', () => {
+      fileInput.click();
+    });
 
-    // Add click listeners
-    document.querySelectorAll('.gallery-item').forEach(item => {
+    // Add click listeners for photos
+    document.querySelectorAll('.gallery-item:not(.camera-tile)').forEach(item => {
       item.addEventListener('click', () => {
         const photoId = item.dataset.id;
         const photoIndex = photos.findIndex(p => p.id == photoId);

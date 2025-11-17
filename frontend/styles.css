@@ -143,6 +143,30 @@ body {
   transform: none;
 }
 
+.btn-secondary {
+  background: transparent;
+  color: var(--charcoal);
+  border: 2px solid var(--main-color-light);
+  padding: 15px 40px;
+  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-secondary:hover {
+  background: var(--main-color-lighter);
+  border-color: var(--main-color);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
 /* ===== Header ===== */
 .header {
   padding: 60px 0 40px;
@@ -365,6 +389,43 @@ body {
 
 .gallery-item:hover .gallery-item-overlay {
   opacity: 1;
+}
+
+/* Camera Tile */
+.camera-tile {
+  background: linear-gradient(135deg, var(--main-color-lighter) 0%, rgba(255, 255, 255, 0.9) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--main-color-light);
+  transition: all 0.3s ease;
+}
+
+.camera-tile:hover {
+  opacity: 1;
+  border-color: var(--main-color);
+  background: linear-gradient(135deg, var(--main-color-light) 0%, var(--main-color-lighter) 100%);
+  transform: scale(1.02);
+}
+
+.camera-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--main-color);
+}
+
+.camera-icon svg {
+  stroke-width: 1.5;
+}
+
+.camera-icon p {
+  font-size: 0.9em;
+  font-weight: 500;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .gallery-item img,

@@ -33,6 +33,56 @@
     </div>
   </div>
 
+  <!-- Upload Details Modal -->
+  <div id="uploadModal" class="modal hidden">
+    <div class="modal-content frosted">
+      <div class="modal-header">
+        <h2>Add Details (Optional)</h2>
+        <p id="uploadModalFileCount"></p>
+      </div>
+      <form id="uploadDetailsForm">
+        <div class="form-group">
+          <label for="guestName">Your Name</label>
+          <input
+            type="text"
+            id="guestName"
+            placeholder="e.g., Sarah & John"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="guestMessage">Message</label>
+          <textarea
+            id="guestMessage"
+            rows="3"
+            placeholder="Share a special message or memory..."
+          ></textarea>
+        </div>
+
+        <div id="uploadProgress" class="upload-progress hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p id="uploadStatus">Uploading...</p>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn-secondary" id="cancelUpload" style="flex: 1;">Cancel</button>
+          <button type="submit" class="btn-primary" id="startUpload" style="flex: 1;">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hidden file input -->
+  <input
+    type="file"
+    id="fileInput"
+    accept="image/*,video/*"
+    multiple
+    style="display: none;"
+  >
+
   <!-- Main Content -->
   <div id="mainContent" class="hidden">
     <!-- Header -->
@@ -61,66 +111,6 @@
         </div>
       </div>
     </header>
-
-    <!-- Upload Section -->
-    <section class="upload-section">
-      <div class="container">
-        <div class="upload-card frosted">
-          <h3>Share a Memory</h3>
-          <form id="uploadForm">
-            <div class="form-group">
-              <label for="guestName">Your Name (Optional)</label>
-              <input
-                type="text"
-                id="guestName"
-                placeholder="e.g., Sarah & John"
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="guestMessage">Message (Optional)</label>
-              <textarea
-                id="guestMessage"
-                rows="3"
-                placeholder="Share a special message or memory..."
-              ></textarea>
-            </div>
-
-            <div class="form-group">
-              <label class="file-input-label">
-                <input
-                  type="file"
-                  id="fileInput"
-                  accept="image/*,video/*"
-                  multiple
-                  required
-                >
-                <span class="file-input-button">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Choose Photos or Videos
-                </span>
-              </label>
-              <div id="fileNames" class="file-names"></div>
-            </div>
-
-            <button type="submit" class="btn-primary" id="uploadButton">
-              Upload Memories
-            </button>
-
-            <div id="uploadProgress" class="upload-progress hidden">
-              <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-              </div>
-              <p id="uploadStatus">Uploading...</p>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
 
     <!-- Gallery Section -->
     <section class="gallery-section">

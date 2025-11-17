@@ -406,14 +406,6 @@ body {
   aspect-ratio: 1;
 }
 
-.gallery-item:hover {
-  opacity: 0.85;
-  z-index: 1;
-}
-
-.gallery-item:hover .gallery-item-overlay {
-  opacity: 1;
-}
 
 /* Camera Tile */
 .camera-tile {

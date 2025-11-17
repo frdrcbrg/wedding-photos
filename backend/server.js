@@ -19,6 +19,13 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // Access code from environment variable
 const ACCESS_CODE = process.env.ACCESS_CODE || 'WINTER2025';
 
+// Run S3 preflight check on startup
+(async () => {
+  console.log('\n🔍 Running S3 preflight check...\n');
+  await s3Ops.testConnection();
+  console.log('\n');
+})();
+
 // ===== API Routes =====
 
 /**

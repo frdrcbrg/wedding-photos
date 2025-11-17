@@ -1,5 +1,7 @@
-const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 // Initialize S3 client (works with AWS S3 or DigitalOcean Spaces)
@@ -16,7 +18,109 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
+/**
+ * Log message to file and console
+ * @param {string} message - Log message
+ * @param {string} level - Log level (INFO, ERROR, SUCCESS)
+ */
+const logToFile = (message, level = 'INFO') => {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [${level}] ${message}\n`;
+  const logPath = path.join(__dirname, 's3-preflight.log');
+
+  // Write to file
+  fs.appendFileSync(logPath, logMessage);
+
+  // Also log to console
+  console.log(logMessage.trim());
+};
+
+/**
+ * Test S3 connection and permissions
+ * @returns {Promise<boolean>} - True if connection successful
+ */
+const testS3Connection = async () => {
+  logToFile('='.repeat(60), 'INFO');
+  logToFile('Starting S3 Preflight Check', 'INFO');
+  logToFile('='.repeat(60), 'INFO');
+
+  try {
+    // Check if credentials are configured
+    if (!process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY) {
+      logToFile('S3 credentials not configured in environment variables', 'ERROR');
+      return false;
+    }
+
+    if (!BUCKET_NAME) {
+      logToFile('S3_BUCKET_NAME not configured in environment variables', 'ERROR');
+      return false;
+    }
+
+    logToFile(`Configuration:`, 'INFO');
+    logToFile(`  - Bucket: ${BUCKET_NAME}`, 'INFO');
+    logToFile(`  - Region: ${process.env.S3_REGION || 'us-east-1'}`, 'INFO');
+    logToFile(`  - Endpoint: ${process.env.S3_ENDPOINT || 'AWS S3 (default)'}`, 'INFO');
+    logToFile(`  - Access Key: ${process.env.S3_ACCESS_KEY_ID.substring(0, 8)}...`, 'INFO');
+
+    // Test bucket access
+    logToFile('Testing bucket access...', 'INFO');
+    const command = new HeadBucketCommand({ Bucket: BUCKET_NAME });
+    await s3Client.send(command);
+
+    logToFile('✅ Successfully connected to S3 bucket!', 'SUCCESS');
+    logToFile('✅ Bucket is accessible and credentials are valid', 'SUCCESS');
+
+    // Test presigned URL generation
+    logToFile('Testing presigned URL generation...', 'INFO');
+    const testKey = `test-preflight-${Date.now()}.txt`;
+    const putCommand = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: testKey,
+      ContentType: 'text/plain',
+    });
+    const presignedUrl = await getSignedUrl(s3Client, putCommand, { expiresIn: 60 });
+
+    logToFile('✅ Presigned URL generation successful', 'SUCCESS');
+    logToFile(`  - Test URL generated for key: ${testKey}`, 'INFO');
+
+    logToFile('='.repeat(60), 'INFO');
+    logToFile('S3 Preflight Check PASSED', 'SUCCESS');
+    logToFile('='.repeat(60), 'INFO');
+
+    return true;
+  } catch (error) {
+    logToFile('❌ S3 Connection Test FAILED', 'ERROR');
+    logToFile(`Error Type: ${error.name}`, 'ERROR');
+    logToFile(`Error Message: ${error.message}`, 'ERROR');
+
+    if (error.Code) {
+      logToFile(`Error Code: ${error.Code}`, 'ERROR');
+    }
+
+    // Provide helpful hints based on error type
+    if (error.name === 'NotFound' || error.Code === 'NoSuchBucket') {
+      logToFile('Hint: Bucket does not exist or name is incorrect', 'ERROR');
+    } else if (error.name === 'InvalidAccessKeyId') {
+      logToFile('Hint: Access Key ID is invalid', 'ERROR');
+    } else if (error.name === 'SignatureDoesNotMatch') {
+      logToFile('Hint: Secret Access Key is incorrect', 'ERROR');
+    } else if (error.name === 'AccessDenied' || error.Code === 'Forbidden') {
+      logToFile('Hint: Credentials do not have permission to access this bucket', 'ERROR');
+    } else if (error.name === 'InvalidBucketName') {
+      logToFile('Hint: Bucket name format is invalid', 'ERROR');
+    }
+
+    logToFile('='.repeat(60), 'ERROR');
+
+    return false;
+  }
+};
+
 const s3Ops = {
+  /**
+   * Run preflight check
+   */
+  testConnection: testS3Connection,
   /**
    * Generate presigned URL for uploading to S3
    * @param {string} filename - Original filename

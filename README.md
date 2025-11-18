@@ -292,4 +292,8 @@ Built with ❄️ for magical winter weddings.
 
 ---
 
-# Test auto-deploy
+## 🚀 Automatic Deployment
+
+This repository is configured with automatic deployment via GitHub webhooks. Every push to `main` triggers an automatic deployment to the production server.
+
+For setup instructions, see [AUTO_DEPLOY_SETUP.md](AUTO_DEPLOY_SETUP.md)

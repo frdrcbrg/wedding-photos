@@ -277,32 +277,39 @@ app.get('/api/stats', async (req, res) => {
  * Create zip of selected photos and send download link via email
  */
 app.post('/api/download-zip', async (req, res) => {
+  console.log('📨 Download request received:', req.body);
   try {
     const { photoIds, email } = req.body;
 
     if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+      console.log('❌ No photos selected');
       return res.status(400).json({ error: 'No photos selected' });
     }
 
     if (!email) {
+      console.log('❌ No email provided');
       return res.status(400).json({ error: 'Email address is required' });
     }
 
     if (photoIds.length > MAX_PHOTO_SELECTION) {
+      console.log(`❌ Too many photos: ${photoIds.length}`);
       return res.status(400).json({ error: `Maximum ${MAX_PHOTO_SELECTION} photos allowed` });
     }
 
     // Get photo details from database
+    console.log('📂 Fetching photo details from database...');
     const uploads = await dbOps.getAllUploads();
     const selectedPhotos = uploads.filter(photo => photoIds.includes(photo.id.toString()));
 
     if (selectedPhotos.length === 0) {
+      console.log('❌ No valid photos found for IDs:', photoIds);
       return res.status(400).json({ error: 'No valid photos found' });
     }
 
     console.log(`📦 Creating zip for ${selectedPhotos.length} photos, sending to ${email}`);
 
     // Create zip archive in memory
+    console.log('🗜️  Initializing archiver...');
     const archive = archiver('zip', {
       zlib: { level: 9 } // Maximum compression
     });
@@ -310,12 +317,15 @@ app.post('/api/download-zip', async (req, res) => {
     const chunks = [];
     archive.on('data', (chunk) => chunks.push(chunk));
     archive.on('error', (err) => {
+      console.error('❌ Archive error:', err);
       throw err;
     });
 
     // Download each photo and add to zip
+    console.log('📥 Downloading photos from S3...');
     for (const photo of selectedPhotos) {
       try {
+        console.log(`  Downloading ${photo.filename}...`);
         // Generate fresh presigned URL
         const freshUrl = await s3Ops.getPresignedDownloadUrl(photo.s3_key);
 
@@ -327,20 +337,25 @@ app.post('/api/download-zip', async (req, res) => {
 
         // Add to zip with original filename
         archive.append(Buffer.from(response.data), { name: photo.filename });
-        console.log(`  ✓ Added ${photo.filename} to zip`);
+        console.log(`  ✓ Added ${photo.filename} to zip (${(response.data.byteLength / 1024).toFixed(1)} KB)`);
       } catch (error) {
         console.error(`  ✗ Failed to add ${photo.filename}:`, error.message);
         // Continue with other photos
       }
     }
 
-    // Finalize the archive
-    await archive.finalize();
-
-    // Wait for all data to be collected
-    await new Promise((resolve) => {
-      archive.on('end', resolve);
+    // Finalize the archive and wait for it to finish
+    console.log('🗜️  Finalizing archive...');
+    const finalizePromise = new Promise((resolve, reject) => {
+      archive.on('finish', () => {
+        console.log('✓ Archive finalized');
+        resolve();
+      });
+      archive.on('error', reject);
     });
+
+    archive.finalize();
+    await finalizePromise;
 
     const zipBuffer = Buffer.concat(chunks);
     console.log(`📦 Zip created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
@@ -350,7 +365,7 @@ app.post('/api/download-zip', async (req, res) => {
       console.log('📧 Using Resend API...');
       const resend = new Resend(process.env.RESEND_API_KEY);
 
-      await resend.emails.send({
+      const emailResult = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'noreply@fredericberg.de',
         to: email,
         subject: 'Your Wedding Photos - Martha & Frédéric',
@@ -372,6 +387,7 @@ app.post('/api/download-zip', async (req, res) => {
           },
         ],
       });
+      console.log('✅ Email sent via Resend:', emailResult);
     } else {
       // Fallback to SMTP
       console.log('📧 Using SMTP...');
@@ -425,7 +441,7 @@ app.post('/api/download-zip', async (req, res) => {
       await transporter.sendMail(mailOptions);
     }
 
-    console.log(`✉️  Email sent successfully to ${email}`);
+    console.log(`✅ Email sent successfully to ${email}`);
 
     res.json({
       success: true,
@@ -433,7 +449,8 @@ app.post('/api/download-zip', async (req, res) => {
       photoCount: selectedPhotos.length,
     });
   } catch (error) {
-    console.error('Error creating zip and sending email:', error);
+    console.error('❌ Error creating zip and sending email:', error);
+    console.error('Error stack:', error.stack);
 
     // Provide more specific error messages
     let errorMessage = 'Failed to send download link. Please try again.';
@@ -446,6 +463,8 @@ app.post('/api/download-zip', async (req, res) => {
       errorMessage = 'Email authentication failed. Please check SMTP credentials.';
     } else if (error.code === 'ECONNREFUSED') {
       errorMessage = 'Email server refused connection. Check SMTP settings.';
+    } else if (error.message) {
+      errorMessage = `Error: ${error.message}`;
     }
 
     res.status(500).json({ error: errorMessage });

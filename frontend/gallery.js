@@ -25,6 +25,20 @@ const totalUploads = document.getElementById('totalUploads');
 const photoCount = document.getElementById('photoCount');
 const videoCount = document.getElementById('videoCount');
 
+// Selection elements
+const toggleSelectionBtn = document.getElementById('toggleSelectionBtn');
+const selectionControls = document.getElementById('selectionControls');
+const selectionCount = document.getElementById('selectionCount');
+const selectionLimit = document.getElementById('selectionLimit');
+const cancelSelectionBtn = document.getElementById('cancelSelectionBtn');
+const downloadSelectionBtn = document.getElementById('downloadSelectionBtn');
+const emailModal = document.getElementById('emailModal');
+const emailForm = document.getElementById('emailForm');
+const emailInput = document.getElementById('emailInput');
+const emailError = document.getElementById('emailError');
+const emailSuccess = document.getElementById('emailSuccess');
+const cancelEmailBtn = document.getElementById('cancelEmailBtn');
+
 // ===== State =====
 let isAuthenticated = false;
 let allPhotos = [];
@@ -33,12 +47,43 @@ let currentPhotoIndex = -1;
 let loadedCount = 0;
 let isLoading = false;
 
+// Selection state
+let selectionMode = false;
+let selectedPhotos = new Set();
+let maxSelection = 50;
+
 // ===== Initialization =====
-document.addEventListener('DOMContentLoaded', () => {
-  // Check if already authenticated
-  const savedCode = sessionStorage.getItem('accessCode');
-  if (savedCode) {
-    verifyAccess(savedCode, true);
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check if access code is required
+  try {
+    const configResponse = await fetch(`${API_BASE}/api/config`);
+    const config = await configResponse.json();
+
+    // Set max selection from config
+    maxSelection = config.maxPhotoSelection || 50;
+    selectionLimit.textContent = `(max ${maxSelection})`;
+
+    if (!config.requireAccessCode) {
+      // Access code not required, skip login and load content directly
+      isAuthenticated = true;
+      accessModal.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+      await loadGallery();
+      loadStats();
+    } else {
+      // Check if already authenticated
+      const savedCode = sessionStorage.getItem('accessCode');
+      if (savedCode) {
+        verifyAccess(savedCode, true);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching config:', error);
+    // Fall back to checking saved code
+    const savedCode = sessionStorage.getItem('accessCode');
+    if (savedCode) {
+      verifyAccess(savedCode, true);
+    }
   }
 
   // Event listeners
@@ -56,6 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox) closeLightboxModal();
   });
+
+  // Selection event listeners
+  toggleSelectionBtn.addEventListener('click', toggleSelectionMode);
+  cancelSelectionBtn.addEventListener('click', cancelSelection);
+  downloadSelectionBtn.addEventListener('click', showEmailModal);
+  emailForm.addEventListener('submit', handleEmailSubmit);
+  cancelEmailBtn.addEventListener('click', closeEmailModal);
 
   // Intersection Observer for lazy loading images
   setupLazyLoading();
@@ -161,11 +213,30 @@ function loadMorePhotos() {
   const items = gallery.querySelectorAll('.gallery-item');
   items.forEach((item, index) => {
     if (index >= loadedCount - photosToLoad.length) {
-      item.addEventListener('click', () => {
-        const photoId = item.dataset.id;
-        const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
-        openLightbox(photoIndex);
+      item.addEventListener('click', (e) => {
+        if (selectionMode) {
+          // In selection mode, toggle checkbox
+          const checkbox = item.querySelector('.selection-checkbox');
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            handlePhotoSelection(item.dataset.id, checkbox.checked);
+          }
+        } else {
+          // Normal mode, open lightbox
+          const photoId = item.dataset.id;
+          const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
+          openLightbox(photoIndex);
+        }
       });
+
+      // Checkbox click handler
+      const checkbox = item.querySelector('.selection-checkbox');
+      if (checkbox) {
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handlePhotoSelection(item.dataset.id, checkbox.checked);
+        });
+      }
     }
   });
 
@@ -191,10 +262,17 @@ function createGalleryItem(photo) {
 
   const videoIndicator = isVideo ? '<div class="video-indicator">▶</div>' : '';
 
+  const selectionCheckbox = `
+    <div class="selection-overlay">
+      <input type="checkbox" class="selection-checkbox" data-photo-id="${photo.id}">
+    </div>
+  `;
+
   return `
     <div class="gallery-item" data-id="${photo.id}">
       ${videoIndicator}
       ${mediaTag}
+      ${selectionCheckbox}
     </div>
   `;
 }
@@ -402,4 +480,121 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ===== Selection Mode Functions =====
+function toggleSelectionMode() {
+  selectionMode = !selectionMode;
+
+  if (selectionMode) {
+    // Enter selection mode
+    gallery.classList.add('selection-mode');
+    selectionControls.classList.remove('hidden');
+    toggleSelectionBtn.textContent = 'Cancel Selection';
+    toggleSelectionBtn.classList.add('active');
+  } else {
+    // Exit selection mode
+    cancelSelection();
+  }
+}
+
+function cancelSelection() {
+  selectionMode = false;
+  selectedPhotos.clear();
+  gallery.classList.remove('selection-mode');
+  selectionControls.classList.add('hidden');
+  toggleSelectionBtn.textContent = 'Select Photos';
+  toggleSelectionBtn.classList.remove('active');
+
+  // Uncheck all checkboxes
+  document.querySelectorAll('.selection-checkbox').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+
+  updateSelectionUI();
+}
+
+function handlePhotoSelection(photoId, isSelected) {
+  if (isSelected) {
+    // Check if max selection reached
+    if (selectedPhotos.size >= maxSelection) {
+      alert(`You can only select up to ${maxSelection} photos.`);
+      // Uncheck the checkbox
+      const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${photoId}"]`);
+      if (checkbox) checkbox.checked = false;
+      return;
+    }
+    selectedPhotos.add(photoId);
+  } else {
+    selectedPhotos.delete(photoId);
+  }
+
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  selectionCount.textContent = selectedPhotos.size;
+  downloadSelectionBtn.disabled = selectedPhotos.size === 0;
+}
+
+function showEmailModal() {
+  if (selectedPhotos.size === 0) return;
+
+  emailModal.classList.remove('hidden');
+  emailInput.value = '';
+  emailError.textContent = '';
+  emailSuccess.textContent = '';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEmailModal() {
+  emailModal.classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+async function handleEmailSubmit(e) {
+  e.preventDefault();
+
+  const email = emailInput.value.trim();
+  if (!email) {
+    emailError.textContent = 'Please enter your email address';
+    return;
+  }
+
+  emailError.textContent = '';
+  emailSuccess.textContent = '';
+
+  // Disable submit button
+  const submitBtn = emailForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+
+  try {
+    const response = await fetch(`${API_BASE}/api/download-zip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        photoIds: Array.from(selectedPhotos),
+        email: email,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      emailSuccess.textContent = data.message || 'Download link sent to your email!';
+      setTimeout(() => {
+        closeEmailModal();
+        cancelSelection();
+      }, 2000);
+    } else {
+      emailError.textContent = data.error || 'Failed to send email. Please try again.';
+    }
+  } catch (error) {
+    console.error('Error requesting download:', error);
+    emailError.textContent = 'Connection error. Please try again.';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send Download Link';
+  }
 }

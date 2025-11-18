@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Winter Wedding Photo Gallery">
-  <title>Gallery | Winter Wedding</title>
+  <meta name="description" content="Martha & Frédéric Wedding Gallery - 29. November 2025">
+  <title>Gallery | Martha & Frédéric</title>
   <link rel="stylesheet" href="gallery.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
     <div class="modal-content frosted">
       <div class="modal-header">
         <h1>❄️</h1>
-        <h2>Winter Wedding Gallery</h2>
+        <h2>Martha & Frédéric</h2>
         <p>Please enter the access code to view the gallery</p>
       </div>
       <form id="accessForm">
@@ -41,8 +41,8 @@
         <div class="logo-container">
           <img src="logo.png" alt="Wedding Logo" class="wedding-logo">
         </div>
-        <h1 class="title">Photo Gallery</h1>
-        <p class="subtitle">Memories from our special day</p>
+        <h1 class="title">Martha & Frédéric</h1>
+        <p class="subtitle">29. November 2025</p>
 
         <div class="nav-links">
           <a href="index.html" class="nav-link">
@@ -74,6 +74,23 @@
     <!-- Gallery Section -->
     <section class="gallery-section">
       <div class="container">
+        <!-- Selection Controls -->
+        <div id="selectionControls" class="selection-controls hidden">
+          <div class="selection-info">
+            <span id="selectionCount">0</span> selected
+            <span id="selectionLimit" class="selection-limit"></span>
+          </div>
+          <div class="selection-actions">
+            <button id="cancelSelectionBtn" class="btn-secondary">Cancel</button>
+            <button id="downloadSelectionBtn" class="btn-primary" disabled>Request Download</button>
+          </div>
+        </div>
+
+        <!-- Toggle Selection Mode -->
+        <div class="selection-toggle">
+          <button id="toggleSelectionBtn" class="btn-secondary">Select Photos</button>
+        </div>
+
         <div id="gallery" class="masonry-gallery">
           <div class="loading">Loading gallery...</div>
         </div>
@@ -107,6 +124,29 @@
     <div class="lightbox-content">
       <img id="lightboxImage" src="" alt="">
       <video id="lightboxVideo" controls></video>
+    </div>
+  </div>
+
+  <!-- Email Modal -->
+  <div id="emailModal" class="modal hidden">
+    <div class="modal-content frosted">
+      <div class="modal-header">
+        <h2>Request Download</h2>
+        <p>Enter your email to receive the download link</p>
+      </div>
+      <form id="emailForm">
+        <input
+          type="email"
+          id="emailInput"
+          placeholder="your.email@example.com"
+          autocomplete="email"
+          required
+        >
+        <button type="submit" class="btn-primary">Send Download Link</button>
+        <button type="button" id="cancelEmailBtn" class="btn-secondary">Cancel</button>
+        <p id="emailError" class="error-message"></p>
+        <p id="emailSuccess" class="success-message"></p>
+      </form>
     </div>
   </div>
 

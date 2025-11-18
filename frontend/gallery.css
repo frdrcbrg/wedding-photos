@@ -112,6 +112,13 @@ body {
   min-height: 20px;
 }
 
+.success-message {
+  color: #4caf50;
+  font-size: 0.9em;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
 /* ===== Buttons ===== */
 .btn-primary {
   background: linear-gradient(135deg, var(--main-color) 0%, var(--main-color-light) 100%);
@@ -236,6 +243,73 @@ body {
   z-index: 2;
 }
 
+/* Selection Controls */
+.selection-toggle {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.selection-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px var(--shadow);
+  margin-bottom: 30px;
+}
+
+.selection-info {
+  font-size: 1.1em;
+  color: var(--charcoal);
+  font-weight: 500;
+}
+
+.selection-info span {
+  color: var(--main-color);
+  font-weight: 600;
+}
+
+.selection-limit {
+  font-size: 0.9em;
+  color: var(--charcoal);
+  opacity: 0.7;
+  margin-left: 5px;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--charcoal);
+  border: 2px solid var(--main-color-light);
+  padding: 10px 25px;
+  border-radius: 10px;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-secondary:hover {
+  background: var(--main-color-lighter);
+  border-color: var(--main-color);
+  transform: translateY(-2px);
+}
+
+.btn-secondary.active {
+  background: var(--main-color);
+  color: white;
+  border-color: var(--main-color);
+}
+
 /* Masonry Grid Layout */
 .masonry-gallery {
   column-count: 4;
@@ -275,6 +349,45 @@ body {
 
 .gallery-item img.loaded {
   opacity: 1;
+}
+
+/* Selection Overlay */
+.selection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.masonry-gallery.selection-mode .selection-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.selection-checkbox {
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  accent-color: var(--main-color);
+  transform: scale(1.5);
+  pointer-events: auto;
+}
+
+.masonry-gallery.selection-mode .gallery-item {
+  cursor: pointer;
+}
+
+.masonry-gallery.selection-mode .gallery-item:hover {
+  opacity: 0.9;
 }
 
 .gallery-item-overlay {

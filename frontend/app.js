@@ -34,11 +34,33 @@ let currentPhotos = [];
 let currentPhotoIndex = -1;
 
 // ===== Initialization =====
-document.addEventListener('DOMContentLoaded', () => {
-  // Check if already authenticated
-  const savedCode = sessionStorage.getItem('accessCode');
-  if (savedCode) {
-    verifyAccess(savedCode, true);
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check if access code is required
+  try {
+    const configResponse = await fetch(`${API_BASE}/api/config`);
+    const config = await configResponse.json();
+
+    if (!config.requireAccessCode) {
+      // Access code not required, skip login and load content directly
+      isAuthenticated = true;
+      accessModal.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+      loadGallery();
+      loadStats();
+    } else {
+      // Check if already authenticated
+      const savedCode = sessionStorage.getItem('accessCode');
+      if (savedCode) {
+        verifyAccess(savedCode, true);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching config:', error);
+    // Fall back to checking saved code
+    const savedCode = sessionStorage.getItem('accessCode');
+    if (savedCode) {
+      verifyAccess(savedCode, true);
+    }
   }
 
   // Event listeners

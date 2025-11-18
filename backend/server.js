@@ -3,6 +3,12 @@ const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
 const exifParser = require('exif-parser');
+const nodemailer = require('nodemailer');
+const archiver = require('archiver');
+const fs = require('fs');
+const { promisify } = require('util');
+const stream = require('stream');
+const pipeline = promisify(stream.pipeline);
 require('dotenv').config();
 
 const dbOps = require('./database');
@@ -22,6 +28,8 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // Access code from environment variable
 const ACCESS_CODE = process.env.ACCESS_CODE || 'WINTER2025';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const REQUIRE_ACCESS_CODE = process.env.REQUIRE_ACCESS_CODE !== 'false';
+const MAX_PHOTO_SELECTION = parseInt(process.env.MAX_PHOTO_SELECTION || '50', 10);
 
 // Run S3 preflight check on startup
 (async () => {
@@ -84,10 +92,26 @@ async function extractExifDate(s3Url, fileType) {
 // ===== API Routes =====
 
 /**
+ * GET /api/config
+ * Get public configuration settings
+ */
+app.get('/api/config', (req, res) => {
+  res.json({
+    requireAccessCode: REQUIRE_ACCESS_CODE,
+    maxPhotoSelection: MAX_PHOTO_SELECTION,
+  });
+});
+
+/**
  * POST /api/access
  * Verify access code
  */
 app.post('/api/access', (req, res) => {
+  // If access code is not required, always grant access
+  if (!REQUIRE_ACCESS_CODE) {
+    return res.json({ success: true, message: 'Access granted' });
+  }
+
   const { code } = req.body;
 
   if (!code) {
@@ -246,6 +270,130 @@ app.get('/api/stats', async (req, res) => {
 });
 
 /**
+ * POST /api/download-zip
+ * Create zip of selected photos and send download link via email
+ */
+app.post('/api/download-zip', async (req, res) => {
+  try {
+    const { photoIds, email } = req.body;
+
+    if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+      return res.status(400).json({ error: 'No photos selected' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required' });
+    }
+
+    if (photoIds.length > MAX_PHOTO_SELECTION) {
+      return res.status(400).json({ error: `Maximum ${MAX_PHOTO_SELECTION} photos allowed` });
+    }
+
+    // Get photo details from database
+    const uploads = await dbOps.getAllUploads();
+    const selectedPhotos = uploads.filter(photo => photoIds.includes(photo.id.toString()));
+
+    if (selectedPhotos.length === 0) {
+      return res.status(400).json({ error: 'No valid photos found' });
+    }
+
+    console.log(`📦 Creating zip for ${selectedPhotos.length} photos, sending to ${email}`);
+
+    // Create zip archive in memory
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+
+    const chunks = [];
+    archive.on('data', (chunk) => chunks.push(chunk));
+    archive.on('error', (err) => {
+      throw err;
+    });
+
+    // Download each photo and add to zip
+    for (const photo of selectedPhotos) {
+      try {
+        // Generate fresh presigned URL
+        const freshUrl = await s3Ops.getPresignedDownloadUrl(photo.s3_key);
+
+        // Download photo from S3
+        const response = await axios.get(freshUrl, {
+          responseType: 'arraybuffer',
+          timeout: 30000,
+        });
+
+        // Add to zip with original filename
+        archive.append(Buffer.from(response.data), { name: photo.filename });
+        console.log(`  ✓ Added ${photo.filename} to zip`);
+      } catch (error) {
+        console.error(`  ✗ Failed to add ${photo.filename}:`, error.message);
+        // Continue with other photos
+      }
+    }
+
+    // Finalize the archive
+    await archive.finalize();
+
+    // Wait for all data to be collected
+    await new Promise((resolve) => {
+      archive.on('end', resolve);
+    });
+
+    const zipBuffer = Buffer.concat(chunks);
+    console.log(`📦 Zip created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+
+    // Create email transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // Send email with zip as attachment
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+      to: email,
+      subject: 'Your Wedding Photos - Martha & Frédéric',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #ae9883;">Your Wedding Photos</h2>
+          <p>Thank you for attending our special day!</p>
+          <p>Your selected photos (${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'}) are attached to this email.</p>
+          <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
+            Martha & Frédéric<br>
+            29. November 2025
+          </p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `wedding-photos-${Date.now()}.zip`,
+          content: zipBuffer,
+          contentType: 'application/zip',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    console.log(`✉️  Email sent successfully to ${email}`);
+
+    res.json({
+      success: true,
+      message: 'Download link sent to your email!',
+      photoCount: selectedPhotos.length,
+    });
+  } catch (error) {
+    console.error('Error creating zip and sending email:', error);
+    res.status(500).json({ error: 'Failed to send download link. Please try again.' });
+  }
+});
+
+/**
  * GET /api/health
  * Health check endpoint
  */
@@ -347,9 +495,10 @@ app.listen(PORT, '0.0.0.0', () => {
 
 🚀 Server running on port ${PORT}
 🌐 Access at: http://localhost:${PORT}
-🔒 Access code: ${ACCESS_CODE}
+${REQUIRE_ACCESS_CODE ? `🔒 Access code: ${ACCESS_CODE}` : '🔓 Public access (no code required)'}
 
 📊 API Endpoints:
+   - GET  /api/config       - Get configuration
    - POST /api/access       - Verify access code
    - POST /api/upload-url   - Get presigned S3 URL
    - POST /api/confirm      - Confirm upload

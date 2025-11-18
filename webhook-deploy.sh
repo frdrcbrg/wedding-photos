@@ -1,36 +1,23 @@
 #!/bin/bash
 
-# Simple webhook deployment script for the server
-# Place this at /opt/docker/wedding-photos/webhook-deploy.sh
-# Make executable: chmod +x /opt/docker/wedding-photos/webhook-deploy.sh
+# Webhook Deploy Script
+# This script is triggered by GitHub Actions webhook after successful build
 
-set -e
+set -e  # Exit on any error
 
-echo "==================================="
-echo "Starting deployment..."
-echo "Time: $(date)"
-echo "==================================="
+# Security: Only allow from localhost (webhook server will validate GitHub signature)
+if [ "$1" != "WEBHOOK_TRIGGERED" ]; then
+    echo "This script should only be called by the webhook server"
+    exit 1
+fi
 
-cd /opt/docker/wedding-photos
+echo "======================================"
+echo "🔄 Webhook Deploy Triggered"
+echo "======================================"
+echo ""
 
-# Pull latest docker-compose.yml if needed
-echo "Pulling latest code..."
-git pull
+# Change to project directory
+cd "$(dirname "$0")"
 
-# Pull the latest Docker image
-echo "Pulling latest Docker image..."
-docker pull ghcr.io/frdrcbrg/wedding-photos:latest
-
-# Restart containers
-echo "Restarting containers..."
-docker compose down
-docker compose up -d
-
-# Cleanup old images
-echo "Cleaning up old images..."
-docker image prune -af
-
-echo "==================================="
-echo "Deployment completed successfully!"
-echo "Time: $(date)"
-echo "==================================="
+# Run the deploy script
+./deploy.sh

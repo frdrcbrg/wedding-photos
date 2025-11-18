@@ -351,7 +351,19 @@ app.post('/api/download-zip', async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 30000, // 30 seconds
     });
+
+    // Test connection before sending
+    try {
+      await transporter.verify();
+      console.log('✓ SMTP connection verified');
+    } catch (verifyError) {
+      console.error('✗ SMTP connection failed:', verifyError.message);
+      throw new Error(`SMTP connection failed: ${verifyError.message}`);
+    }
 
     // Send email with zip as attachment
     const mailOptions = {
@@ -389,7 +401,21 @@ app.post('/api/download-zip', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating zip and sending email:', error);
-    res.status(500).json({ error: 'Failed to send download link. Please try again.' });
+
+    // Provide more specific error messages
+    let errorMessage = 'Failed to send download link. Please try again.';
+
+    if (error.message.includes('SMTP connection failed')) {
+      errorMessage = 'Email server connection failed. Please contact the administrator.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = 'Email server timeout. The server may be blocking SMTP ports.';
+    } else if (error.code === 'EAUTH') {
+      errorMessage = 'Email authentication failed. Please check SMTP credentials.';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Email server refused connection. Check SMTP settings.';
+    }
+
+    res.status(500).json({ error: errorMessage });
   }
 });
 

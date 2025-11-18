@@ -14,6 +14,7 @@ require('dotenv').config();
 const dbOps = require('./database');
 const s3Ops = require('./s3');
 const { generateThumbnail } = require('./thumbnail');
+const { testSMTPConnection } = require('./smtp-preflight');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,11 +32,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const REQUIRE_ACCESS_CODE = process.env.REQUIRE_ACCESS_CODE !== 'false';
 const MAX_PHOTO_SELECTION = parseInt(process.env.MAX_PHOTO_SELECTION || '50', 10);
 
-// Run S3 preflight check on startup
+// Run preflight checks on startup
 (async () => {
-  console.log('\n🔍 Running S3 preflight check...\n');
+  console.log('\n🔍 Running preflight checks...\n');
   await s3Ops.testConnection();
   console.log('\n');
+  await testSMTPConnection();
 })();
 
 // ===== Helper Functions =====

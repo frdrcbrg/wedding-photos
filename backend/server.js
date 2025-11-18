@@ -9,6 +9,7 @@ const fs = require('fs');
 const { promisify } = require('util');
 const stream = require('stream');
 const pipeline = promisify(stream.pipeline);
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const dbOps = require('./database');
@@ -344,55 +345,85 @@ app.post('/api/download-zip', async (req, res) => {
     const zipBuffer = Buffer.concat(chunks);
     console.log(`📦 Zip created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
-    // Create email transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 30000, // 30 seconds
-    });
+    // Check if using Resend API (preferred for DigitalOcean)
+    if (process.env.RESEND_API_KEY) {
+      console.log('📧 Using Resend API...');
+      const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Test connection before sending
-    try {
-      await transporter.verify();
-      console.log('✓ SMTP connection verified');
-    } catch (verifyError) {
-      console.error('✗ SMTP connection failed:', verifyError.message);
-      throw new Error(`SMTP connection failed: ${verifyError.message}`);
-    }
-
-    // Send email with zip as attachment
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: 'Your Wedding Photos - Martha & Frédéric',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #ae9883;">Your Wedding Photos</h2>
-          <p>Thank you for attending our special day!</p>
-          <p>Your selected photos (${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'}) are attached to this email.</p>
-          <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
-            Martha & Frédéric<br>
-            29. November 2025
-          </p>
-        </div>
-      `,
-      attachments: [
-        {
-          filename: `wedding-photos-${Date.now()}.zip`,
-          content: zipBuffer,
-          contentType: 'application/zip',
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM || 'noreply@fredericberg.de',
+        to: email,
+        subject: 'Your Wedding Photos - Martha & Frédéric',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #ae9883;">Your Wedding Photos</h2>
+            <p>Thank you for attending our special day!</p>
+            <p>Your selected photos (${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'}) are attached to this email.</p>
+            <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
+              Martha & Frédéric<br>
+              29. November 2025
+            </p>
+          </div>
+        `,
+        attachments: [
+          {
+            filename: `wedding-photos-${Date.now()}.zip`,
+            content: zipBuffer,
+          },
+        ],
+      });
+    } else {
+      // Fallback to SMTP
+      console.log('📧 Using SMTP...');
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
-      ],
-    };
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 30000, // 30 seconds
+      });
 
-    await transporter.sendMail(mailOptions);
+      // Test connection before sending
+      try {
+        await transporter.verify();
+        console.log('✓ SMTP connection verified');
+      } catch (verifyError) {
+        console.error('✗ SMTP connection failed:', verifyError.message);
+        throw new Error(`SMTP connection failed: ${verifyError.message}`);
+      }
+
+      // Send email with zip as attachment
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+        to: email,
+        subject: 'Your Wedding Photos - Martha & Frédéric',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #ae9883;">Your Wedding Photos</h2>
+            <p>Thank you for attending our special day!</p>
+            <p>Your selected photos (${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'}) are attached to this email.</p>
+            <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
+              Martha & Frédéric<br>
+              29. November 2025
+            </p>
+          </div>
+        `,
+        attachments: [
+          {
+            filename: `wedding-photos-${Date.now()}.zip`,
+            content: zipBuffer,
+            contentType: 'application/zip',
+          },
+        ],
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
 
     console.log(`✉️  Email sent successfully to ${email}`);
 

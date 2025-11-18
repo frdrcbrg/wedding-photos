@@ -16,17 +16,36 @@ async function testSMTPConnection() {
 
   try {
     log('═══════════════════════════════════════════════');
-    log('📧 SMTP Preflight Check');
+    log('📧 Email Preflight Check');
     log('═══════════════════════════════════════════════');
+
+    // Check if Resend API is configured (preferred)
+    if (process.env.RESEND_API_KEY) {
+      log('\n📋 Configuration:');
+      log('   Method: Resend API');
+      log(`   API Key: ${process.env.RESEND_API_KEY.substring(0, 10)}...`);
+      log(`   From: ${process.env.EMAIL_FROM || 'noreply@fredericberg.de'}`);
+
+      log('\n✅ Resend API configured!');
+      log('   Email delivery is ready (HTTP API - bypasses SMTP port blocking).');
+      log('═══════════════════════════════════════════════\n');
+
+      fs.writeFileSync(logFile, logs.join('\n'));
+      return;
+    }
 
     // Check if SMTP is configured
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      log('⚠️  SMTP not configured');
-      log('   Missing required environment variables:');
+      log('⚠️  Email not configured');
+      log('   Missing required environment variables.');
+      log('\n   Option 1 (Recommended): Use Resend API');
+      log('   - RESEND_API_KEY');
+      log('   - EMAIL_FROM');
+      log('\n   Option 2: Use SMTP');
       if (!process.env.SMTP_HOST) log('   - SMTP_HOST');
       if (!process.env.SMTP_USER) log('   - SMTP_USER');
       if (!process.env.SMTP_PASS) log('   - SMTP_PASS');
-      log('   Photo download feature will not work.');
+      log('\n   Photo download feature will not work.');
       log('   See PHOTO_SELECTION_FEATURE.md for setup instructions.');
       log('═══════════════════════════════════════════════\n');
 
@@ -35,6 +54,7 @@ async function testSMTPConnection() {
     }
 
     log(`\n📋 Configuration:`);
+    log('   Method: SMTP');
     log(`   Host: ${process.env.SMTP_HOST}`);
     log(`   Port: ${process.env.SMTP_PORT || '587'}`);
     log(`   Secure: ${process.env.SMTP_SECURE || 'false'}`);

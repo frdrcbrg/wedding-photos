@@ -553,13 +553,10 @@ function closeEmailModal() {
 }
 
 async function handleEmailSubmit(e) {
-  console.log('handleEmailSubmit called');
   e.preventDefault();
   e.stopPropagation();
 
   const email = emailInput.value.trim();
-  console.log('Email:', email);
-  console.log('Selected photos:', Array.from(selectedPhotos));
 
   if (!email) {
     emailError.textContent = 'Please enter your email address';
@@ -583,14 +580,6 @@ async function handleEmailSubmit(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending...';
 
-  const requestData = {
-    photoIds: Array.from(selectedPhotos),
-    email: email,
-  };
-
-  console.log('Sending download request to:', `${API_BASE}/api/download-zip`);
-  console.log('Request data:', requestData);
-
   try {
     const response = await fetch(`${API_BASE}/api/download-zip`, {
       method: 'POST',
@@ -598,13 +587,13 @@ async function handleEmailSubmit(e) {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(requestData),
+      body: JSON.stringify({
+        photoIds: Array.from(selectedPhotos),
+        email: email,
+      }),
     });
 
-    console.log('Response received:', response.status, response.statusText);
-
     const data = await response.json();
-    console.log('Response data:', data);
 
     if (response.ok) {
       emailSuccess.textContent = data.message || 'Download link sent to your email!';
@@ -619,7 +608,6 @@ async function handleEmailSubmit(e) {
     console.error('Error requesting download:', error);
     emailError.textContent = 'Connection error. Please try again.';
   } finally {
-    console.log('Resetting button');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Send Download Link';
   }

@@ -553,11 +553,21 @@ function closeEmailModal() {
 }
 
 async function handleEmailSubmit(e) {
+  console.log('handleEmailSubmit called');
   e.preventDefault();
+  e.stopPropagation();
 
   const email = emailInput.value.trim();
+  console.log('Email:', email);
+  console.log('Selected photos:', Array.from(selectedPhotos));
+
   if (!email) {
     emailError.textContent = 'Please enter your email address';
+    return;
+  }
+
+  if (selectedPhotos.size === 0) {
+    emailError.textContent = 'No photos selected';
     return;
   }
 
@@ -566,23 +576,29 @@ async function handleEmailSubmit(e) {
 
   // Disable submit button
   const submitBtn = emailForm.querySelector('button[type="submit"]');
+  if (!submitBtn) {
+    console.error('Submit button not found!');
+    return;
+  }
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending...';
 
-  console.log('Sending download request:', {
+  const requestData = {
     photoIds: Array.from(selectedPhotos),
     email: email,
-    url: `${API_BASE}/api/download-zip`
-  });
+  };
+
+  console.log('Sending download request to:', `${API_BASE}/api/download-zip`);
+  console.log('Request data:', requestData);
 
   try {
     const response = await fetch(`${API_BASE}/api/download-zip`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        photoIds: Array.from(selectedPhotos),
-        email: email,
-      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestData),
     });
 
     console.log('Response received:', response.status, response.statusText);

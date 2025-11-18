@@ -569,6 +569,12 @@ async function handleEmailSubmit(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending...';
 
+  console.log('Sending download request:', {
+    photoIds: Array.from(selectedPhotos),
+    email: email,
+    url: `${API_BASE}/api/download-zip`
+  });
+
   try {
     const response = await fetch(`${API_BASE}/api/download-zip`, {
       method: 'POST',
@@ -579,7 +585,10 @@ async function handleEmailSubmit(e) {
       }),
     });
 
+    console.log('Response received:', response.status, response.statusText);
+
     const data = await response.json();
+    console.log('Response data:', data);
 
     if (response.ok) {
       emailSuccess.textContent = data.message || 'Download link sent to your email!';
@@ -594,6 +603,7 @@ async function handleEmailSubmit(e) {
     console.error('Error requesting download:', error);
     emailError.textContent = 'Connection error. Please try again.';
   } finally {
+    console.log('Resetting button');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Send Download Link';
   }

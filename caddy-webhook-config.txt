@@ -1,0 +1,26 @@
+# Add this to your existing Caddyfile on the droplet
+# Location: /etc/caddy/Caddyfile
+
+# If you have a fredericberg.de block, add this inside it:
+
+fredericberg.de {
+    # Webhook endpoint for auto-deploy
+    handle /webhook {
+        reverse_proxy localhost:9000
+    }
+
+    # Your existing configuration here...
+    # (reverse_proxy for the main app, etc.)
+}
+
+# Full example if you don't have the block yet:
+
+fredericberg.de {
+    # Webhook endpoint
+    handle /webhook {
+        reverse_proxy localhost:9000
+    }
+
+    # Main app (adjust to your actual config)
+    reverse_proxy localhost:3000
+}

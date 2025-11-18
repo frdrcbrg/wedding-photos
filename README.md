@@ -294,6 +294,12 @@ Built with ❄️ for magical winter weddings.
 
 ## 🚀 Automatic Deployment
 
-This repository is configured with automatic deployment via GitHub webhooks. Every push to `main` triggers an automatic deployment to the production server.
+This repository is configured with automatic deployment via GitHub webhooks. Every push to `main` automatically triggers deployment to the production server - no manual intervention required!
+
+**How it works:**
+1. Push code to `main` branch
+2. GitHub Actions builds Docker image
+3. Webhook triggers deployment on server
+4. Latest version goes live automatically
 
 For setup instructions, see [AUTO_DEPLOY_SETUP.md](AUTO_DEPLOY_SETUP.md)

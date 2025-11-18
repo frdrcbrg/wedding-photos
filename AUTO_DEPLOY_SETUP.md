@@ -53,7 +53,11 @@ ExecStart=/usr/bin/node /path/to/wedding-photos/webhook-server.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
-EnvironmentFile=/path/to/wedding-photos/.env
+Environment=WEBHOOK_PORT=9000
+Environment=WEBHOOK_SECRET=your_generated_secret_here
+
+# Optional: Load from .env file (comment out if .env doesn't exist)
+# EnvironmentFile=-/path/to/wedding-photos/.env
 
 [Install]
 WantedBy=multi-user.target
@@ -146,6 +150,56 @@ docker compose logs -f
    - New version is deployed
 
 ## Troubleshooting
+
+### Service fails to start: "unavailable resources or another system error"
+
+This usually means:
+
+1. **EnvironmentFile doesn't exist or has wrong path**
+
+   Fix: Either remove the `EnvironmentFile` line or use `-` prefix to make it optional:
+   ```ini
+   # Make it optional (won't fail if file doesn't exist)
+   EnvironmentFile=-/path/to/wedding-photos/.env
+   ```
+
+2. **Node.js not found at /usr/bin/node**
+
+   Find Node.js location:
+   ```bash
+   which node
+   ```
+
+   Update the ExecStart path in the service file:
+   ```ini
+   ExecStart=/usr/local/bin/node /path/to/wedding-photos/webhook-server.js
+   ```
+
+3. **Working directory doesn't exist**
+
+   Make sure the path is correct:
+   ```bash
+   ls -la /path/to/wedding-photos
+   ```
+
+4. **Port already in use**
+
+   Check if port 9000 is already taken:
+   ```bash
+   sudo lsof -i :9000
+   ```
+
+   If taken, use a different port in your service file:
+   ```ini
+   Environment=WEBHOOK_PORT=9001
+   ```
+
+After fixing, reload and restart:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart wedding-webhook
+sudo systemctl status wedding-webhook
+```
 
 ### Webhook not triggered
 

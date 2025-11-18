@@ -581,7 +581,7 @@ async function handleEmailSubmit(e) {
   submitBtn.textContent = 'Sending...';
 
   try {
-    const response = await fetch(`${API_BASE}/api/download-zip`, {
+    const response = await fetch(`${API_BASE}/api/request-download`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

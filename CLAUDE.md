@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Recent Session Summary (2025-11-17)
+## Recent Session Summary (2025-11-18)
 
 **Working Configuration:**
 - Deployed on DigitalOcean droplet
@@ -20,11 +20,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 6. Added S3 preflight check on startup (logs to `backend/s3-preflight.log`)
 7. Added automatic database initialization: `init-db.js` creates database and tables on startup
 8. Added swipe navigation to photo lightbox with keyboard and touch support
+9. **NEW**: Refactored download system from email attachments to download links (2025-11-18)
+   - Emails now contain download links instead of large zip attachments
+   - Download links expire after 7 days (JWT-based, stateless)
+   - Hybrid caching: zip files cached for 1 hour, regenerated on demand
+   - Automatic cache cleanup runs every hour
 
 **Environment Setup:**
-- `.env` must include: PostgreSQL credentials, S3 credentials, ACCESS_CODE
+- `.env` must include: PostgreSQL credentials, S3 credentials, ACCESS_CODE, JWT_SECRET
 - S3_ENDPOINT format: `https://fra1.digitaloceanspaces.com` (region only)
 - POSTGRES_HOST: `db` (connects to external PostgreSQL container)
+- JWT_SECRET: Generate with `openssl rand -hex 32` for download link signing
+- PUBLIC_URL: Set to production domain for download link generation (e.g., `wedding.fredericberg.de`)
 
 **Important Notes:**
 - Docker Compose V2 syntax: `docker compose` (not `docker-compose`)
@@ -188,6 +195,42 @@ For DigitalOcean Spaces:
 - **Upload method**: Direct to S3 via presigned URLs (5-minute expiry)
 - **File naming**: `uploads/{timestamp}-{random}-{sanitized_filename}`
 - **Validation**: File type checked in `s3.js:validateFileType()`
+
+## Photo Download Feature
+
+The app allows users to select multiple photos and receive a download link via email.
+
+### Download Flow
+
+1. **Selection**: User clicks "Select Photos" in gallery, selects photos (max 50)
+2. **Request**: User clicks "Request Download", enters email address
+3. **Token Generation**: Backend creates JWT token containing photo IDs (7-day expiry)
+4. **Email Delivery**: User receives email with download link (no attachment)
+5. **Download**: Clicking link generates zip file on-demand (or serves from cache)
+
+### Key Implementation Details
+
+- **Stateless**: No database tracking - all info stored in JWT token
+- **Hybrid Caching**:
+  - First download generates zip and caches in `/tmp/zips/` for 1 hour
+  - Subsequent downloads within 1 hour serve cached file (faster)
+  - Cache automatically cleaned every hour
+- **Security**:
+  - JWT tokens signed with `JWT_SECRET`
+  - Links expire after 7 days
+  - Token hash used for cache filename
+- **Email Size**: Emails stay small (just link, no attachment)
+
+### API Endpoints
+
+- `POST /api/request-download` - Generate token, send email with link
+- `GET /api/download/:token` - Verify token, generate/serve zip file
+
+### Environment Variables
+
+- `JWT_SECRET` - Secret for signing tokens (generate with `openssl rand -hex 32`)
+- `PUBLIC_URL` - Production domain for link generation (optional, defaults to request host)
+- `NODE_ENV` - Set to `production` for HTTPS links
 
 ## Customization Points
 

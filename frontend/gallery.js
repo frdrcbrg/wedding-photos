@@ -208,13 +208,24 @@ function loadMorePhotos() {
   loadMoreBtn.disabled = true;
   loadMoreBtn.textContent = 'Loading...';
 
-  const photosToLoad = allPhotos.slice(loadedCount, loadedCount + ITEMS_PER_PAGE);
+  // Use filtered photos if in filter mode, otherwise use all photos
+  const sourcePhotos = showingSelectedOnly
+    ? allPhotos.filter(photo => selectedPhotos.has(photo.id.toString()))
+    : allPhotos;
+
+  const photosToLoad = sourcePhotos.slice(loadedCount, loadedCount + ITEMS_PER_PAGE);
 
   photosToLoad.forEach(photo => {
     const photoElement = createGalleryItem(photo);
     gallery.insertAdjacentHTML('beforeend', photoElement);
-    displayedPhotos.push(photo);
   });
+
+  // Update displayedPhotos to match what's actually shown
+  if (showingSelectedOnly) {
+    displayedPhotos = sourcePhotos.slice(0, loadedCount + photosToLoad.length);
+  } else {
+    displayedPhotos = sourcePhotos.slice(0, loadedCount + photosToLoad.length);
+  }
 
   loadedCount += photosToLoad.length;
 
@@ -241,7 +252,7 @@ function loadMorePhotos() {
   });
 
   // Show/hide load more button
-  if (loadedCount >= allPhotos.length) {
+  if (loadedCount >= sourcePhotos.length) {
     loadMoreContainer.classList.add('hidden');
   } else {
     loadMoreContainer.classList.remove('hidden');
@@ -636,20 +647,17 @@ function toggleFilter() {
   if (showingSelectedOnly) {
     filterSelectedBtn.classList.add('active');
     filterSelectedBtn.querySelector('span').textContent = 'Show All';
-    // Filter to show only selected photos
-    displayedPhotos = allPhotos.filter(photo => selectedPhotos.has(photo.id.toString()));
   } else {
     filterSelectedBtn.classList.remove('active');
     filterSelectedBtn.querySelector('span').textContent = 'Show Selected';
-    // Reset to show all photos
-    displayedPhotos = [];
   }
 
   // Reload gallery with filtered/all photos
   loadedCount = 0;
+  displayedPhotos = [];
   gallery.innerHTML = '';
 
-  if (showingSelectedOnly && displayedPhotos.length === 0) {
+  if (showingSelectedOnly && selectedPhotos.size === 0) {
     gallery.innerHTML = '<div class="empty-gallery"><p>No photos selected yet</p></div>';
   } else {
     loadMorePhotos();

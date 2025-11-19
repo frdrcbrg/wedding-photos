@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Recent Session Summary (2025-11-18)
+## Recent Session Summary (2025-11-19)
 
 **Working Configuration:**
 - Deployed on DigitalOcean droplet
@@ -20,11 +20,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 6. Added S3 preflight check on startup (logs to `backend/s3-preflight.log`)
 7. Added automatic database initialization: `init-db.js` creates database and tables on startup
 8. Added swipe navigation to photo lightbox with keyboard and touch support
-9. **NEW**: Refactored download system from email attachments to download links (2025-11-18)
+9. Refactored download system from email attachments to download links (2025-11-18)
    - Emails now contain download links instead of large zip attachments
    - Download links expire after 7 days (JWT-based, stateless)
    - Hybrid caching: zip files cached for 1 hour, regenerated on demand
    - Automatic cache cleanup runs every hour
+10. **NEW**: Major gallery redesign for photo download experience (2025-11-19)
+   - Renamed gallery page to download.html (photo download focus)
+   - Uniform CSS Grid layout with square tiles (object-fit: cover)
+   - Floating basket button (bottom-right FAB) for selection management
+   - Checkmark badges on selected photos
+   - Always-available selection (no mode toggle needed)
+   - Lightbox selection integration (select while viewing full-size)
+   - Filter toggle: "Show Selected Only" / "Show All"
+   - Removed "Back to Main" navigation (standalone download page)
 
 **Environment Setup:**
 - `.env` must include: PostgreSQL credentials, S3 credentials, ACCESS_CODE, JWT_SECRET
@@ -43,7 +52,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A minimalistic winter-themed wedding photo sharing web application. Guests can upload photos/videos via access code, with direct S3 storage and no complex authentication. Built with vanilla JavaScript frontend and Node.js/Express backend.
+A minimalistic winter-themed wedding photo sharing web application with two main pages:
+
+1. **Upload Page (index.html)**: Guests can upload photos/videos during the wedding via access code
+2. **Download Page (download.html)**: Post-event page for guests to browse and download their favorite photos
+
+Features direct S3 storage, no complex authentication, and JWT-based download links. Built with vanilla JavaScript frontend and Node.js/Express backend.
 
 ## Tech Stack
 
@@ -141,12 +155,20 @@ No automated tests are currently configured. Test manually:
 
 ### Key Files
 
+**Backend:**
 - `backend/server.js` - Express app with all API routes
 - `backend/database.js` - PostgreSQL operations with connection pooling (uploads table)
 - `backend/s3.js` - S3 presigned URL generation and file validation
-- `frontend/app.js` - Client-side upload logic, gallery, lightbox
-- `frontend/index.html` - Single-page app structure
+
+**Frontend - Upload Page:**
+- `frontend/index.html` - Upload page for guests during wedding
+- `frontend/app.js` - Client-side upload logic
 - `frontend/styles.css` - Winter theme (ice blue, snowflakes, frosted glass)
+
+**Frontend - Download Page:**
+- `frontend/download.html` - Post-event photo download gallery
+- `frontend/download.js` - Photo browsing, selection, and download logic
+- `frontend/download.css` - Gallery grid, floating basket, lightbox styles
 
 ### Data Flow
 

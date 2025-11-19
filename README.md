@@ -1,20 +1,32 @@
 # ❄️ Winter Wedding Photo Sharing App
 
-A beautiful, minimalistic web application for sharing wedding photos and videos with guests. Features a Winter Wedding theme with snowflake animations, frosted glass effects, and a clean, elegant design.
+A beautiful, minimalistic web application for sharing wedding photos and videos with guests. Features two main pages: an **upload page** for during the wedding, and a **download page** for guests to select and download their favorite photos afterward. Includes a Winter Wedding theme with snowflake animations, frosted glass effects, and a clean, elegant design.
 
 ![Winter Wedding Theme](https://img.shields.io/badge/Theme-Winter_Wedding-2196F3?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 ## ✨ Features
 
+### Upload Page (index.html)
 - **🎨 Beautiful Winter Theme** - Ice blue colors, snowflake animations, and frosted glass effects
 - **📸 Photo & Video Upload** - Support for images and videos up to 100MB
 - **🔒 Access Code Protection** - Simple access control without complex authentication
 - **☁️ S3 Storage** - Direct uploads to AWS S3 or DigitalOcean Spaces
 - **📱 Responsive Design** - Works perfectly on all devices
+
+### Download Page (download.html)
+- **🖼️ Uniform Grid Gallery** - Clean, consistent photo grid with square tiles
+- **✨ Smart Selection** - Checkmark badges on selected photos
+- **🛒 Floating Basket** - Bottom-right button showing selection count
+- **🔍 Filter Toggle** - "Show Selected Only" / "Show All" modes
+- **💡 Lightbox Selection** - Select/deselect photos while viewing full-size
+- **📧 Email Download Links** - JWT-based download links (no large email attachments)
+- **⏱️ Smart Caching** - Zip files cached for 1 hour for faster downloads
+
+### General
 - **🎯 Lightweight** - No frontend frameworks, pure vanilla JavaScript
 - **🐳 Docker Ready** - Easy deployment with Docker
-- **💾 SQLite Database** - No external database needed
+- **💾 PostgreSQL Database** - Reliable, scalable data storage
 - **⚡ Real-time Stats** - Track total uploads, photos, and videos
 
 ## 🏗️ Architecture
@@ -36,15 +48,17 @@ A beautiful, minimalistic web application for sharing wedding photos and videos 
 
 **Backend:**
 - Node.js + Express
-- SQLite (better-sqlite3)
-- AWS SDK for S3
+- PostgreSQL (pg)
+- AWS SDK v3 for S3
 - Presigned URLs for direct uploads
+- JWT for download link authentication
 
 **Frontend:**
 - HTML5 + CSS3
-- Vanilla JavaScript
+- Vanilla JavaScript (no frameworks)
 - Modern CSS (Grid/Flexbox)
 - Progressive enhancement
+- Two pages: Upload (index.html) and Download (download.html)
 
 ## 🚀 Quick Start
 
@@ -95,9 +109,8 @@ A beautiful, minimalistic web application for sharing wedding photos and videos 
    ```
 
 5. **Open your browser:**
-   ```
-   http://localhost:3000
-   ```
+   - Upload page: `http://localhost:3000`
+   - Download page: `http://localhost:3000/download.html`
 
 ## 🐳 Docker Deployment
 

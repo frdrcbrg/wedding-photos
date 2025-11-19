@@ -74,23 +74,6 @@
     <!-- Gallery Section -->
     <section class="gallery-section">
       <div class="container">
-        <!-- Selection Controls -->
-        <div id="selectionControls" class="selection-controls hidden">
-          <div class="selection-info">
-            <span id="selectionCount">0</span> selected
-            <span id="selectionLimit" class="selection-limit"></span>
-          </div>
-          <div class="selection-actions">
-            <button id="cancelSelectionBtn" class="btn-secondary">Cancel</button>
-            <button id="downloadSelectionBtn" class="btn-primary" disabled>Request Download</button>
-          </div>
-        </div>
-
-        <!-- Toggle Selection Mode -->
-        <div class="selection-toggle">
-          <button id="toggleSelectionBtn" class="btn-secondary">Select Photos</button>
-        </div>
-
         <div id="gallery" class="masonry-gallery">
           <div class="loading">Loading gallery...</div>
         </div>
@@ -104,6 +87,11 @@
   <!-- Lightbox -->
   <div id="lightbox" class="lightbox hidden">
     <button class="lightbox-close" id="closeLightbox">&times;</button>
+    <button class="lightbox-select" id="lightboxSelect">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </button>
     <a class="lightbox-download" id="lightboxDownload" download>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -148,6 +136,41 @@
         <p id="emailSuccess" class="success-message"></p>
       </form>
     </div>
+  </div>
+
+  <!-- Floating Basket Button -->
+  <div id="floatingBasket" class="floating-basket hidden">
+    <div class="basket-actions">
+      <button id="filterSelectedBtn" class="basket-action-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span>Show Selected</span>
+      </button>
+      <button id="requestDownloadBtn" class="basket-action-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Request Download</span>
+      </button>
+      <button id="clearSelectionBtn" class="basket-action-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span>Clear All</span>
+      </button>
+    </div>
+    <button id="basketFab" class="basket-fab">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+      <span id="basketBadge" class="basket-badge">0</span>
+    </button>
   </div>
 
   <script src="gallery.js"></script>

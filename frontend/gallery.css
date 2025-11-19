@@ -310,10 +310,11 @@ body {
   border-color: var(--main-color);
 }
 
-/* Masonry Grid Layout */
+/* CSS Grid Layout */
 .masonry-gallery {
-  column-count: 5;
-  column-gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
 }
 
 .gallery-item {
@@ -321,15 +322,15 @@ body {
   overflow: hidden;
   cursor: pointer;
   background: #f0f0f0;
-  margin-bottom: 8px;
-  break-inside: avoid;
   border-radius: 6px;
+  aspect-ratio: 1;
 }
 
 .gallery-item img,
 .gallery-item video {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
   display: block;
   border-radius: 6px;
 }
@@ -354,14 +355,9 @@ body {
   align-items: flex-start;
   justify-content: flex-end;
   padding: 8px;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.masonry-gallery.selection-mode .selection-overlay {
   opacity: 1;
   pointer-events: auto;
+  z-index: 10;
 }
 
 .selection-checkbox {
@@ -373,8 +369,32 @@ body {
   pointer-events: auto;
 }
 
-.masonry-gallery.selection-mode .gallery-item {
-  cursor: pointer;
+/* Checkmark Badge */
+.selection-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: var(--main-color);
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 11;
+}
+
+.gallery-item.selected .selection-badge {
+  display: flex;
+}
+
+.selection-badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: white;
+  stroke-width: 3;
+  fill: none;
 }
 
 .gallery-item-overlay {
@@ -526,6 +546,43 @@ body {
   transform: scale(1.1);
 }
 
+.lightbox-select {
+  position: absolute;
+  top: 30px;
+  right: 170px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.lightbox-select:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.lightbox-select.selected {
+  background: var(--main-color);
+  border-color: var(--main-color);
+}
+
+.lightbox-select svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+}
+
 .lightbox-nav {
   position: absolute;
   top: 50%;
@@ -574,6 +631,117 @@ body {
   border-radius: 10px;
 }
 
+/* Floating Basket Button */
+.floating-basket {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.basket-fab {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--main-color) 0%, var(--main-color-light) 100%);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(174, 152, 131, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.basket-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(174, 152, 131, 0.5);
+}
+
+.basket-fab svg {
+  width: 28px;
+  height: 28px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+}
+
+.basket-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #f44336;
+  color: white;
+  border-radius: 50%;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 0 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.basket-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.floating-basket.expanded .basket-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.basket-action-btn {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--main-color-light);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  color: var(--charcoal);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.basket-action-btn:hover {
+  background: var(--main-color-lighter);
+  border-color: var(--main-color);
+  transform: translateX(-4px);
+}
+
+.basket-action-btn.active {
+  background: var(--main-color);
+  color: white;
+  border-color: var(--main-color);
+}
+
+.basket-action-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+}
+
 /* ===== Utility Classes ===== */
 .hidden {
   display: none !important;
@@ -582,12 +750,8 @@ body {
 /* ===== Responsive Design ===== */
 @media (max-width: 1200px) {
   .masonry-gallery {
-    column-count: 4;
-    column-gap: 6px;
-  }
-
-  .gallery-item {
-    margin-bottom: 6px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
 }
 
@@ -609,12 +773,8 @@ body {
   }
 
   .masonry-gallery {
-    column-count: 3;
-    column-gap: 5px;
-  }
-
-  .gallery-item {
-    margin-bottom: 5px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
   }
 
   .lightbox-close {
@@ -637,6 +797,18 @@ body {
     height: 20px;
   }
 
+  .lightbox-select {
+    top: 15px;
+    right: 115px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .lightbox-select svg {
+    width: 20px;
+    height: 20px;
+  }
+
   .lightbox-nav {
     width: 45px;
     height: 45px;
@@ -648,6 +820,21 @@ body {
 
   .lightbox-next {
     right: 10px;
+  }
+
+  .floating-basket {
+    bottom: 20px;
+    right: 20px;
+  }
+
+  .basket-fab {
+    width: 56px;
+    height: 56px;
+  }
+
+  .basket-fab svg {
+    width: 24px;
+    height: 24px;
   }
 }
 
@@ -661,11 +848,7 @@ body {
   }
 
   .masonry-gallery {
-    column-count: 2;
-    column-gap: 4px;
-  }
-
-  .gallery-item {
-    margin-bottom: 4px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
   }
 }

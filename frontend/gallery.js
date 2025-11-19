@@ -17,6 +17,7 @@ const lightbox = document.getElementById('lightbox');
 const lightboxImage = document.getElementById('lightboxImage');
 const lightboxVideo = document.getElementById('lightboxVideo');
 const lightboxDownload = document.getElementById('lightboxDownload');
+const lightboxSelect = document.getElementById('lightboxSelect');
 const closeLightbox = document.getElementById('closeLightbox');
 const lightboxPrev = document.getElementById('lightboxPrev');
 const lightboxNext = document.getElementById('lightboxNext');
@@ -25,19 +26,21 @@ const totalUploads = document.getElementById('totalUploads');
 const photoCount = document.getElementById('photoCount');
 const videoCount = document.getElementById('videoCount');
 
-// Selection elements
-const toggleSelectionBtn = document.getElementById('toggleSelectionBtn');
-const selectionControls = document.getElementById('selectionControls');
-const selectionCount = document.getElementById('selectionCount');
-const selectionLimit = document.getElementById('selectionLimit');
-const cancelSelectionBtn = document.getElementById('cancelSelectionBtn');
-const downloadSelectionBtn = document.getElementById('downloadSelectionBtn');
+// Email modal elements
 const emailModal = document.getElementById('emailModal');
 const emailForm = document.getElementById('emailForm');
 const emailInput = document.getElementById('emailInput');
 const emailError = document.getElementById('emailError');
 const emailSuccess = document.getElementById('emailSuccess');
 const cancelEmailBtn = document.getElementById('cancelEmailBtn');
+
+// Basket elements
+const floatingBasket = document.getElementById('floatingBasket');
+const basketFab = document.getElementById('basketFab');
+const basketBadge = document.getElementById('basketBadge');
+const filterSelectedBtn = document.getElementById('filterSelectedBtn');
+const requestDownloadBtn = document.getElementById('requestDownloadBtn');
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
 // ===== State =====
 let isAuthenticated = false;
@@ -48,9 +51,10 @@ let loadedCount = 0;
 let isLoading = false;
 
 // Selection state
-let selectionMode = false;
 let selectedPhotos = new Set();
 let maxSelection = 50;
+let showingSelectedOnly = false;
+let basketExpanded = false;
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -61,7 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Set max selection from config
     maxSelection = config.maxPhotoSelection || 50;
-    selectionLimit.textContent = `(max ${maxSelection})`;
 
     if (!config.requireAccessCode) {
       // Access code not required, skip login and load content directly
@@ -102,12 +105,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === lightbox) closeLightboxModal();
   });
 
-  // Selection event listeners
-  toggleSelectionBtn.addEventListener('click', toggleSelectionMode);
-  cancelSelectionBtn.addEventListener('click', cancelSelection);
-  downloadSelectionBtn.addEventListener('click', showEmailModal);
+  // Email modal listeners
   emailForm.addEventListener('submit', handleEmailSubmit);
   cancelEmailBtn.addEventListener('click', closeEmailModal);
+
+  // Basket event listeners
+  basketFab.addEventListener('click', toggleBasket);
+  filterSelectedBtn.addEventListener('click', toggleFilter);
+  requestDownloadBtn.addEventListener('click', handleBasketDownload);
+  clearSelectionBtn.addEventListener('click', clearAllSelections);
+
+  // Lightbox selection listener
+  lightboxSelect.addEventListener('click', toggleLightboxSelection);
 
   // Intersection Observer for lazy loading images
   setupLazyLoading();
@@ -214,19 +223,10 @@ function loadMorePhotos() {
   items.forEach((item, index) => {
     if (index >= loadedCount - photosToLoad.length) {
       item.addEventListener('click', (e) => {
-        if (selectionMode) {
-          // In selection mode, toggle checkbox
-          const checkbox = item.querySelector('.selection-checkbox');
-          if (checkbox) {
-            checkbox.checked = !checkbox.checked;
-            handlePhotoSelection(item.dataset.id, checkbox.checked);
-          }
-        } else {
-          // Normal mode, open lightbox
-          const photoId = item.dataset.id;
-          const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
-          openLightbox(photoIndex);
-        }
+        // Always open lightbox when clicking the item
+        const photoId = item.dataset.id;
+        const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
+        openLightbox(photoIndex);
       });
 
       // Checkbox click handler
@@ -255,6 +255,7 @@ function loadMorePhotos() {
 function createGalleryItem(photo) {
   const isVideo = photo.file_type === 'video';
   const thumbnailUrl = photo.thumbnail_url || photo.s3_url;
+  const isSelected = selectedPhotos.has(photo.id.toString());
 
   const mediaTag = isVideo
     ? `<video src="${thumbnailUrl}" muted></video>`
@@ -264,15 +265,24 @@ function createGalleryItem(photo) {
 
   const selectionCheckbox = `
     <div class="selection-overlay">
-      <input type="checkbox" class="selection-checkbox" data-photo-id="${photo.id}">
+      <input type="checkbox" class="selection-checkbox" data-photo-id="${photo.id}" ${isSelected ? 'checked' : ''}>
+    </div>
+  `;
+
+  const checkmarkBadge = `
+    <div class="selection-badge">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
     </div>
   `;
 
   return `
-    <div class="gallery-item" data-id="${photo.id}">
+    <div class="gallery-item ${isSelected ? 'selected' : ''}" data-id="${photo.id}">
       ${videoIndicator}
       ${mediaTag}
       ${selectionCheckbox}
+      ${checkmarkBadge}
     </div>
   `;
 }
@@ -362,6 +372,9 @@ function openLightbox(photoIndex) {
 
   lightbox.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+
+  // Update selection state for lightbox button
+  updateLightboxSelectionState();
 
   // Preload next and previous images for faster navigation
   preloadAdjacentImages(photoIndex);
@@ -482,37 +495,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// ===== Selection Mode Functions =====
-function toggleSelectionMode() {
-  selectionMode = !selectionMode;
-
-  if (selectionMode) {
-    // Enter selection mode
-    gallery.classList.add('selection-mode');
-    selectionControls.classList.remove('hidden');
-    toggleSelectionBtn.textContent = 'Cancel Selection';
-    toggleSelectionBtn.classList.add('active');
-  } else {
-    // Exit selection mode
-    cancelSelection();
-  }
-}
-
-function cancelSelection() {
-  selectionMode = false;
-  selectedPhotos.clear();
-  gallery.classList.remove('selection-mode');
-  selectionControls.classList.add('hidden');
-  toggleSelectionBtn.textContent = 'Select Photos';
-  toggleSelectionBtn.classList.remove('active');
-
-  // Uncheck all checkboxes
-  document.querySelectorAll('.selection-checkbox').forEach(checkbox => {
-    checkbox.checked = false;
-  });
-
-  updateSelectionUI();
-}
 
 function handlePhotoSelection(photoId, isSelected) {
   if (isSelected) {
@@ -529,12 +511,24 @@ function handlePhotoSelection(photoId, isSelected) {
     selectedPhotos.delete(photoId);
   }
 
+  // Update the gallery item visual state
+  const galleryItem = document.querySelector(`.gallery-item[data-id="${photoId}"]`);
+  if (galleryItem) {
+    if (isSelected) {
+      galleryItem.classList.add('selected');
+    } else {
+      galleryItem.classList.remove('selected');
+    }
+  }
+
   updateSelectionUI();
+  updateBasketUI();
+  updateLightboxSelectionState();
 }
 
 function updateSelectionUI() {
-  selectionCount.textContent = selectedPhotos.size;
-  downloadSelectionBtn.disabled = selectedPhotos.size === 0;
+  // This function is kept for compatibility but does nothing now
+  // Selection UI is handled by updateBasketUI()
 }
 
 function showEmailModal() {
@@ -599,7 +593,7 @@ async function handleEmailSubmit(e) {
       emailSuccess.textContent = data.message || 'Download link sent to your email!';
       setTimeout(() => {
         closeEmailModal();
-        cancelSelection();
+        clearAllSelections();
       }, 2000);
     } else {
       emailError.textContent = data.error || 'Failed to send email. Please try again.';
@@ -611,4 +605,147 @@ async function handleEmailSubmit(e) {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Send Download Link';
   }
+}
+
+// ===== Basket Functions =====
+function updateBasketUI() {
+  const count = selectedPhotos.size;
+  basketBadge.textContent = count;
+
+  if (count > 0) {
+    floatingBasket.classList.remove('hidden');
+  } else {
+    floatingBasket.classList.add('hidden');
+    basketExpanded = false;
+    floatingBasket.classList.remove('expanded');
+  }
+}
+
+function toggleBasket() {
+  basketExpanded = !basketExpanded;
+  if (basketExpanded) {
+    floatingBasket.classList.add('expanded');
+  } else {
+    floatingBasket.classList.remove('expanded');
+  }
+}
+
+function toggleFilter() {
+  showingSelectedOnly = !showingSelectedOnly;
+
+  if (showingSelectedOnly) {
+    filterSelectedBtn.classList.add('active');
+    filterSelectedBtn.querySelector('span').textContent = 'Show All';
+    // Filter to show only selected photos
+    displayedPhotos = allPhotos.filter(photo => selectedPhotos.has(photo.id.toString()));
+  } else {
+    filterSelectedBtn.classList.remove('active');
+    filterSelectedBtn.querySelector('span').textContent = 'Show Selected';
+    // Reset to show all photos
+    displayedPhotos = [];
+  }
+
+  // Reload gallery with filtered/all photos
+  loadedCount = 0;
+  gallery.innerHTML = '';
+
+  if (showingSelectedOnly && displayedPhotos.length === 0) {
+    gallery.innerHTML = '<div class="empty-gallery"><p>No photos selected yet</p></div>';
+  } else {
+    loadMorePhotos();
+  }
+
+  // Close basket menu
+  basketExpanded = false;
+  floatingBasket.classList.remove('expanded');
+}
+
+function handleBasketDownload() {
+  // Close basket menu
+  basketExpanded = false;
+  floatingBasket.classList.remove('expanded');
+  // Show email modal
+  showEmailModal();
+}
+
+function clearAllSelections() {
+  selectedPhotos.clear();
+
+  // Uncheck all checkboxes and remove selected class
+  document.querySelectorAll('.selection-checkbox').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  document.querySelectorAll('.gallery-item.selected').forEach(item => {
+    item.classList.remove('selected');
+  });
+
+  // If showing selected only, exit filter mode
+  if (showingSelectedOnly) {
+    toggleFilter();
+  }
+
+  updateSelectionUI();
+  updateBasketUI();
+  updateLightboxSelectionState();
+
+  // Close basket menu
+  basketExpanded = false;
+  floatingBasket.classList.remove('expanded');
+}
+
+// ===== Lightbox Selection Functions =====
+function updateLightboxSelectionState() {
+  if (currentPhotoIndex < 0 || currentPhotoIndex >= displayedPhotos.length) return;
+
+  const photo = displayedPhotos[currentPhotoIndex];
+  const isSelected = selectedPhotos.has(photo.id.toString());
+
+  if (isSelected) {
+    lightboxSelect.classList.add('selected');
+  } else {
+    lightboxSelect.classList.remove('selected');
+  }
+}
+
+function toggleLightboxSelection() {
+  if (currentPhotoIndex < 0 || currentPhotoIndex >= displayedPhotos.length) return;
+
+  const photo = displayedPhotos[currentPhotoIndex];
+  const photoId = photo.id.toString();
+  const isCurrentlySelected = selectedPhotos.has(photoId);
+
+  // Toggle selection
+  const newState = !isCurrentlySelected;
+
+  // Check max selection
+  if (newState && selectedPhotos.size >= maxSelection) {
+    alert(`You can only select up to ${maxSelection} photos.`);
+    return;
+  }
+
+  if (newState) {
+    selectedPhotos.add(photoId);
+  } else {
+    selectedPhotos.delete(photoId);
+  }
+
+  // Update checkbox in gallery
+  const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${photoId}"]`);
+  if (checkbox) {
+    checkbox.checked = newState;
+  }
+
+  // Update gallery item visual state
+  const galleryItem = document.querySelector(`.gallery-item[data-id="${photoId}"]`);
+  if (galleryItem) {
+    if (newState) {
+      galleryItem.classList.add('selected');
+    } else {
+      galleryItem.classList.remove('selected');
+    }
+  }
+
+  updateSelectionUI();
+  updateBasketUI();
+  updateLightboxSelectionState();
 }

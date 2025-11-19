@@ -124,6 +124,11 @@ body {
   min-height: 20px;
 }
 
+/* Email Form Button Spacing */
+#emailForm .btn-secondary {
+  margin-top: 15px;
+}
+
 /* ===== Buttons ===== */
 .btn-primary {
   background: linear-gradient(135deg, var(--main-color) 0%, var(--main-color-light) 100%);

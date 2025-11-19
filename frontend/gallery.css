@@ -312,25 +312,18 @@ body {
 
 /* Masonry Grid Layout */
 .masonry-gallery {
-  column-count: 4;
-  column-gap: 15px;
+  column-count: 5;
+  column-gap: 8px;
 }
 
 .gallery-item {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease;
   background: #f0f0f0;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   break-inside: avoid;
-  border-radius: 8px;
-}
-
-.gallery-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px var(--shadow);
-  z-index: 1;
+  border-radius: 6px;
 }
 
 .gallery-item img,
@@ -338,13 +331,12 @@ body {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* Lazy loading styles */
 .gallery-item img.lazy {
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 .gallery-item img.loaded {
@@ -361,9 +353,8 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 12px;
+  padding: 8px;
   opacity: 0;
-  transition: opacity 0.3s ease;
   pointer-events: none;
   z-index: 10;
 }
@@ -374,20 +365,16 @@ body {
 }
 
 .selection-checkbox {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
   accent-color: var(--main-color);
-  transform: scale(1.5);
+  transform: scale(1.3);
   pointer-events: auto;
 }
 
 .masonry-gallery.selection-mode .gallery-item {
   cursor: pointer;
-}
-
-.masonry-gallery.selection-mode .gallery-item:hover {
-  opacity: 0.9;
 }
 
 .gallery-item-overlay {
@@ -595,7 +582,12 @@ body {
 /* ===== Responsive Design ===== */
 @media (max-width: 1200px) {
   .masonry-gallery {
-    column-count: 3;
+    column-count: 4;
+    column-gap: 6px;
+  }
+
+  .gallery-item {
+    margin-bottom: 6px;
   }
 }
 
@@ -617,12 +609,12 @@ body {
   }
 
   .masonry-gallery {
-    column-count: 2;
-    column-gap: 10px;
+    column-count: 3;
+    column-gap: 5px;
   }
 
   .gallery-item {
-    margin-bottom: 10px;
+    margin-bottom: 5px;
   }
 
   .lightbox-close {
@@ -669,6 +661,11 @@ body {
   }
 
   .masonry-gallery {
-    column-count: 1;
+    column-count: 2;
+    column-gap: 4px;
+  }
+
+  .gallery-item {
+    margin-bottom: 4px;
   }
 }

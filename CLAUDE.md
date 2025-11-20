@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Recent Session Summary (2025-11-20)
+
+**Webhook Integration Completed:**
+- Configured `wedding-webhook.service` systemd service running on port 9000
+- Updated Caddy configuration to proxy `/webhook` and `/health` endpoints to `host.docker.internal:9000`
+- GitHub webhook configured to trigger on successful workflow runs
+- Webhook secret stored in `/opt/docker/wedding-photos/.env`
+
 ## Recent Session Summary (2025-11-19)
 
 **Working Configuration:**

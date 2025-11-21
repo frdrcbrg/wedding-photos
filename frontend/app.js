@@ -254,7 +254,9 @@ async function loadGallery() {
       throw new Error('Failed to load gallery');
     }
 
-    const photos = await response.json();
+    const data = await response.json();
+    // Handle both array response (legacy) and object response with pagination
+    const photos = Array.isArray(data) ? data : (data.photos || []);
     currentPhotos = photos; // Store for navigation
 
     // Create camera tile as first item

@@ -8,6 +8,11 @@ const pool = new Pool({
   user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DB,
+  max: 50, // Maximum 50 connections in pool
+  min: 10, // Keep 10 warm connections ready
+  idleTimeoutMillis: 30000, // Close idle connections after 30s
+  connectionTimeoutMillis: 10000, // Wait max 10s for connection
+  maxUses: 7500, // Recycle connections after 7500 uses
 });
 
 // Test database connection on startup
@@ -21,6 +26,8 @@ pool.query('SELECT NOW()', (err, res) => {
 
 // Database operations
 const dbOps = {
+  pool, // Export pool for raw queries
+
   // Insert new upload
   insertUpload: async (data) => {
     const sql = `
@@ -51,6 +58,12 @@ const dbOps = {
       WHERE id = $2
     `;
     await pool.query(sql, [thumbnailKey, id]);
+  },
+
+  // Update taken_at for an upload
+  updateTakenAt: async (id, takenAt) => {
+    const sql = `UPDATE uploads SET taken_at = $1 WHERE id = $2`;
+    await pool.query(sql, [takenAt, id]);
   },
 
   // Get all uploads

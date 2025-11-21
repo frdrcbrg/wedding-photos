@@ -36,7 +36,8 @@ async function generateThumbnail(originalUrl, originalKey) {
         fit: 'cover',
         position: 'center',
       })
-      .jpeg({ quality: 80 })
+      .jpeg({ quality: 80, progressive: true })
+      .png({ compressionLevel: 6 })
       .toBuffer();
 
     // Generate thumbnail S3 key

@@ -79,6 +79,15 @@ async function initializeDatabase() {
     await appClient.query(addTakenAtColumnQuery);
     console.log('✅ Table "uploads" initialized');
 
+    // Create index for faster sorting
+    // Using functional index to match the query: ORDER BY COALESCE(taken_at, uploaded_at) DESC
+    const createIndexQuery = `
+      CREATE INDEX IF NOT EXISTS idx_uploads_sort
+      ON uploads ((COALESCE(taken_at, uploaded_at)) DESC);
+    `;
+    await appClient.query(createIndexQuery);
+    console.log('✅ Database index created');
+
     // Check current record count
     const countResult = await appClient.query('SELECT COUNT(*) FROM uploads');
     const count = countResult.rows[0].count;

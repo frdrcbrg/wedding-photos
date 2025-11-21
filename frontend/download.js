@@ -49,6 +49,7 @@ let displayedPhotos = [];
 let currentPhotoIndex = -1;
 let loadedCount = 0;
 let isLoading = false;
+let currentPage = 1;
 
 // Selection state
 let selectedPhotos = new Set();
@@ -78,6 +79,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       const savedCode = sessionStorage.getItem('accessCode');
       if (savedCode) {
         verifyAccess(savedCode, true);
+      }
+    }
+
+    // Restore selections from localStorage
+    const savedSelections = localStorage.getItem('selectedPhotos');
+    if (savedSelections) {
+      try {
+        const photoIds = JSON.parse(savedSelections);
+        selectedPhotos = new Set(photoIds);
+        updateBasketUI();
+      } catch (error) {
+        console.error('Failed to restore selections:', error);
       }
     }
   } catch (error) {
@@ -166,101 +179,101 @@ async function verifyAccess(code, silent = false) {
 
 // ===== Gallery Loading =====
 async function loadGallery() {
+  if (isLoading) return;
+
+  isLoading = true;
+  if (currentPage > 1) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading...';
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/api/photos`);
+    const response = await fetch(`${API_BASE}/api/photos?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
 
     if (!response.ok) {
       throw new Error('Failed to load gallery');
     }
 
-    allPhotos = await response.json();
-    displayedPhotos = [];
-    loadedCount = 0;
+    const data = await response.json();
+    const newPhotos = data.photos;
 
-    if (allPhotos.length === 0) {
-      gallery.innerHTML = `
-        <div class="empty-gallery">
-          <p>No memories shared yet</p>
-          <p style="font-size: 0.9em; margin-top: 10px;">Upload some photos to get started!</p>
-        </div>
-      `;
-      return;
+    if (currentPage === 1) {
+      allPhotos = newPhotos;
+      displayedPhotos = newPhotos;
+      gallery.innerHTML = '';
+
+      if (newPhotos.length === 0) {
+        gallery.innerHTML = `
+          <div class="empty-gallery">
+            <p>No memories shared yet</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Upload some photos to get started!</p>
+          </div>
+        `;
+        isLoading = false;
+        return;
+      }
+    } else {
+      allPhotos = [...allPhotos, ...newPhotos];
+      displayedPhotos = [...displayedPhotos, ...newPhotos];
     }
 
-    // Initial load
-    gallery.innerHTML = '';
-    loadMorePhotos();
+    // Render new photos
+    newPhotos.forEach(photo => {
+      const photoElement = createGalleryItem(photo);
+      gallery.insertAdjacentHTML('beforeend', photoElement);
+    });
+
+    // Add event listeners to new items
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const items = gallery.querySelectorAll('.gallery-item');
+
+    items.forEach((item, index) => {
+      if (index >= startIndex) {
+        item.addEventListener('click', (e) => {
+          const photoId = item.dataset.id;
+          // Find index in displayedPhotos
+          const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
+          if (photoIndex !== -1) {
+            openLightbox(photoIndex);
+          }
+        });
+
+        const checkbox = item.querySelector('.selection-checkbox');
+        if (checkbox) {
+          checkbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handlePhotoSelection(item.dataset.id, checkbox.checked);
+          });
+        }
+      }
+    });
+
+    // Update load more button visibility
+    if (data.pagination.hasMore) {
+      loadMoreContainer.classList.remove('hidden');
+    } else {
+      loadMoreContainer.classList.add('hidden');
+    }
 
   } catch (error) {
     console.error('Gallery loading error:', error);
-    gallery.innerHTML = `
-      <div class="loading">
-        Failed to load gallery. Please refresh the page.
-      </div>
-    `;
+    if (currentPage === 1) {
+      gallery.innerHTML = `
+        <div class="loading">
+          Failed to load gallery. Please refresh the page.
+        </div>
+      `;
+    }
+  } finally {
+    isLoading = false;
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.textContent = 'Load More';
   }
 }
 
 function loadMorePhotos() {
-  if (isLoading) return;
-
-  isLoading = true;
-  loadMoreBtn.disabled = true;
-  loadMoreBtn.textContent = 'Loading...';
-
-  // Use filtered photos if in filter mode, otherwise use all photos
-  const sourcePhotos = showingSelectedOnly
-    ? allPhotos.filter(photo => selectedPhotos.has(photo.id.toString()))
-    : allPhotos;
-
-  const photosToLoad = sourcePhotos.slice(loadedCount, loadedCount + ITEMS_PER_PAGE);
-
-  photosToLoad.forEach(photo => {
-    const photoElement = createGalleryItem(photo);
-    gallery.insertAdjacentHTML('beforeend', photoElement);
-  });
-
-  // Update displayedPhotos to match what's actually shown
-  if (showingSelectedOnly) {
-    displayedPhotos = sourcePhotos.slice(0, loadedCount + photosToLoad.length);
-  } else {
-    displayedPhotos = sourcePhotos.slice(0, loadedCount + photosToLoad.length);
-  }
-
-  loadedCount += photosToLoad.length;
-
-  // Add click listeners to newly added items
-  const items = gallery.querySelectorAll('.gallery-item');
-  items.forEach((item, index) => {
-    if (index >= loadedCount - photosToLoad.length) {
-      item.addEventListener('click', (e) => {
-        // Always open lightbox when clicking the item
-        const photoId = item.dataset.id;
-        const photoIndex = displayedPhotos.findIndex(p => p.id == photoId);
-        openLightbox(photoIndex);
-      });
-
-      // Checkbox click handler
-      const checkbox = item.querySelector('.selection-checkbox');
-      if (checkbox) {
-        checkbox.addEventListener('click', (e) => {
-          e.stopPropagation();
-          handlePhotoSelection(item.dataset.id, checkbox.checked);
-        });
-      }
-    }
-  });
-
-  // Show/hide load more button
-  if (loadedCount >= sourcePhotos.length) {
-    loadMoreContainer.classList.add('hidden');
-  } else {
-    loadMoreContainer.classList.remove('hidden');
-  }
-
-  loadMoreBtn.disabled = false;
-  loadMoreBtn.textContent = 'Load More';
-  isLoading = false;
+  currentPage++;
+  loadGallery();
 }
 
 function createGalleryItem(photo) {
@@ -299,8 +312,15 @@ function createGalleryItem(photo) {
 }
 
 // ===== Lazy Loading Setup =====
+let imageObserver;
+let mutationObserver;
+
 function setupLazyLoading() {
-  const imageObserver = new IntersectionObserver((entries, observer) => {
+  // Disconnect old observers if they exist
+  if (imageObserver) imageObserver.disconnect();
+  if (mutationObserver) mutationObserver.disconnect();
+
+  imageObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const img = entry.target;
@@ -315,7 +335,7 @@ function setupLazyLoading() {
       }
     });
   }, {
-    rootMargin: '50px' // Start loading 50px before image enters viewport
+    rootMargin: '200px' // Load 200px before visible
   });
 
   // Observe all lazy images
@@ -323,21 +343,34 @@ function setupLazyLoading() {
     document.querySelectorAll('img.lazy').forEach(img => {
       imageObserver.observe(img);
     });
+
+    // Limit DOM size - remove items far off-screen to prevent memory issues
+    const items = gallery.querySelectorAll('.gallery-item');
+    if (items.length > 150) {
+      // Only check periodically or when adding many items
+      // Logic to remove off-screen items could go here but needs to be careful
+      // about pagination state. For now, we just ensure we don't observe
+      // images that are already loaded.
+    }
   };
 
-  // Initial observation
   observeLazyImages();
 
-  // Re-observe when new images are added
-  const mutationObserver = new MutationObserver(() => {
+  mutationObserver = new MutationObserver(() => {
     observeLazyImages();
   });
 
   mutationObserver.observe(gallery, {
     childList: true,
-    subtree: true
+    subtree: false // Only direct children
   });
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (imageObserver) imageObserver.disconnect();
+  if (mutationObserver) mutationObserver.disconnect();
+});
 
 // ===== Stats Loading =====
 async function loadStats() {
@@ -522,6 +555,9 @@ function handlePhotoSelection(photoId, isSelected) {
     selectedPhotos.delete(photoId);
   }
 
+  // Persist to localStorage
+  localStorage.setItem('selectedPhotos', JSON.stringify(Array.from(selectedPhotos)));
+
   // Update the gallery item visual state
   const galleryItem = document.querySelector(`.gallery-item[data-id="${photoId}"]`);
   if (galleryItem) {
@@ -605,6 +641,7 @@ async function handleEmailSubmit(e) {
       setTimeout(() => {
         closeEmailModal();
         clearAllSelections();
+        localStorage.removeItem('selectedPhotos'); // Clear saved selections
       }, 2000);
     } else {
       emailError.textContent = data.error || 'Failed to send email. Please try again.';
@@ -647,20 +684,22 @@ function toggleFilter() {
   if (showingSelectedOnly) {
     filterSelectedBtn.classList.add('active');
     filterSelectedBtn.querySelector('span').textContent = 'Show All';
+
+    // Hide non-selected items with CSS
+    document.querySelectorAll('.gallery-item').forEach(item => {
+      const photoId = item.dataset.id;
+      if (!selectedPhotos.has(photoId)) {
+        item.style.display = 'none';
+      }
+    });
   } else {
     filterSelectedBtn.classList.remove('active');
     filterSelectedBtn.querySelector('span').textContent = 'Show Selected';
-  }
 
-  // Reload gallery with filtered/all photos
-  loadedCount = 0;
-  displayedPhotos = [];
-  gallery.innerHTML = '';
-
-  if (showingSelectedOnly && selectedPhotos.size === 0) {
-    gallery.innerHTML = '<div class="empty-gallery"><p>No photos selected yet</p></div>';
-  } else {
-    loadMorePhotos();
+    // Show all items
+    document.querySelectorAll('.gallery-item').forEach(item => {
+      item.style.display = '';
+    });
   }
 
   // Close basket menu

@@ -5,6 +5,14 @@ services:
     build: .
     container_name: winter-wedding-app
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
     expose:
       - "3000"
     environment:

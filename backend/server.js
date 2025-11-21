@@ -18,6 +18,10 @@ const dbOps = require('./database');
 const s3Ops = require('./s3');
 const { generateThumbnail } = require('./thumbnail');
 const { testSMTPConnection } = require('./smtp-preflight');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const NodeCache = require('node-cache');
+const urlCache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,8 +30,45 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+  level: 6 // Balanced compression
+}));
+
+// Rate limiter for uploads
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 uploads per 15 minutes per IP
+  message: 'Too many uploads from this IP, please try again in 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiter for download requests
+const downloadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 download requests per hour per IP
+  message: 'Too many download requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Request timeout middleware
+app.use((req, res, next) => {
+  req.setTimeout(30000); // 30 second timeout
+  res.setTimeout(30000);
+  next();
+});
+
 // Serve static frontend files
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend'), {
+  maxAge: '1h', // Cache static assets for 1 hour
+  etag: true,
+  lastModified: true
+}));
 
 // Access code from environment variable
 const ACCESS_CODE = process.env.ACCESS_CODE || 'WINTER2025';
@@ -87,7 +128,59 @@ function cleanupZipCache() {
 setInterval(cleanupZipCache, 60 * 60 * 1000); // 1 hour
 console.log('🧹 Cache cleanup service started (runs every hour)');
 
+// Concurrency control for zip generation
+let activeZipGenerations = 0;
+const MAX_CONCURRENT_ZIPS = 3;
+
+// Simple async queue for thumbnail generation
+const thumbnailQueue = [];
+let processingThumbnails = 0;
+const MAX_CONCURRENT_THUMBNAILS = 2;
+
+async function processThumbnailQueue() {
+  if (processingThumbnails >= MAX_CONCURRENT_THUMBNAILS || thumbnailQueue.length === 0) {
+    return;
+  }
+
+  const job = thumbnailQueue.shift();
+  processingThumbnails++;
+
+  try {
+    const thumbnailKey = await generateThumbnail(job.s3Url, job.s3Key);
+    if (thumbnailKey) {
+      await dbOps.updateThumbnailKey(job.uploadId, thumbnailKey);
+    }
+  } catch (error) {
+    console.error('Thumbnail generation failed:', error);
+  } finally {
+    processingThumbnails--;
+    // Process next in queue
+    setImmediate(processThumbnailQueue);
+  }
+}
+
+// Start queue processor
+setInterval(processThumbnailQueue, 100);
+
 // ===== Helper Functions =====
+
+async function getPresignedUrlCached(s3Key) {
+  const cacheKey = `presigned:${s3Key}`;
+
+  // Check cache first
+  const cached = urlCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Generate new URL
+  const url = await s3Ops.getPresignedDownloadUrl(s3Key);
+
+  // Cache for 1 hour
+  urlCache.set(cacheKey, url);
+
+  return url;
+}
 
 /**
  * Extract EXIF date from image file
@@ -178,7 +271,7 @@ app.post('/api/access', (req, res) => {
  * POST /api/upload-url
  * Generate presigned S3 URL for upload
  */
-app.post('/api/upload-url', async (req, res) => {
+app.post('/api/upload-url', uploadLimiter, async (req, res) => {
   try {
     const { filename, contentType } = req.body;
 
@@ -211,7 +304,7 @@ app.post('/api/upload-url', async (req, res) => {
  * POST /api/confirm
  * Confirm upload and save metadata to database
  */
-app.post('/api/confirm', async (req, res) => {
+app.post('/api/confirm', uploadLimiter, async (req, res) => {
   try {
     const { filename, s3Key, s3Url, fileType, uploadedBy, message } = req.body;
 
@@ -219,10 +312,7 @@ app.post('/api/confirm', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Extract EXIF date from the uploaded file
-    const takenAt = await extractExifDate(s3Url, fileType);
-
-    // Insert into database
+    // Insert into database (without taken_at initially)
     const result = await dbOps.insertUpload({
       filename,
       s3_key: s3Key,
@@ -230,23 +320,26 @@ app.post('/api/confirm', async (req, res) => {
       file_type: fileType,
       uploaded_by: uploadedBy,
       message: message,
-      taken_at: takenAt,
+      taken_at: null, // Will be updated async
     });
 
     const uploadId = result.lastInsertRowid;
 
-    // Generate thumbnail asynchronously (don't block response)
+    // Extract EXIF date asynchronously
+    setImmediate(async () => {
+      try {
+        const takenAt = await extractExifDate(s3Url, fileType);
+        if (takenAt) {
+          await dbOps.updateTakenAt(uploadId, takenAt);
+        }
+      } catch (error) {
+        console.error('EXIF extraction failed:', error);
+      }
+    });
+
+    // Queue thumbnail generation instead of processing immediately
     if (fileType === 'photo') {
-      generateThumbnail(s3Url, s3Key)
-        .then(async (thumbnailKey) => {
-          if (thumbnailKey) {
-            await dbOps.updateThumbnailKey(uploadId, thumbnailKey);
-            console.log(`Thumbnail generated for upload ${uploadId}`);
-          }
-        })
-        .catch((error) => {
-          console.error(`Failed to generate thumbnail for upload ${uploadId}:`, error);
-        });
+      thumbnailQueue.push({ s3Url, s3Key, uploadId });
     }
 
     res.json({
@@ -263,22 +356,39 @@ app.post('/api/confirm', async (req, res) => {
 /**
  * GET /api/photos
  * Get all uploaded photos and videos with fresh presigned URLs
+ * Supports pagination: ?page=1&limit=50
  */
 app.get('/api/photos', async (req, res) => {
+  res.set('Cache-Control', 'private, max-age=60'); // 1 minute cache
   try {
-    const uploads = await dbOps.getAllUploads();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await dbOps.pool.query('SELECT COUNT(*) FROM uploads');
+    const totalCount = parseInt(countResult.rows[0].count);
+
+    // Get paginated uploads
+    const sql = `
+      SELECT * FROM uploads
+      ORDER BY COALESCE(taken_at, uploaded_at) DESC
+      LIMIT $1 OFFSET $2
+    `;
+    const result = await dbOps.pool.query(sql, [limit, offset]);
+    const uploads = result.rows;
 
     // Generate fresh presigned URLs for each upload (full image and thumbnail)
     const uploadsWithFreshUrls = await Promise.all(
       uploads.map(async (upload) => {
         try {
-          const freshUrl = await s3Ops.getPresignedDownloadUrl(upload.s3_key);
+          const freshUrl = await getPresignedUrlCached(upload.s3_key);
 
           // Generate thumbnail URL if thumbnail exists
           let thumbnailUrl = freshUrl; // Default to full image
           if (upload.thumbnail_key) {
             try {
-              thumbnailUrl = await s3Ops.getPresignedDownloadUrl(upload.thumbnail_key);
+              thumbnailUrl = await getPresignedUrlCached(upload.thumbnail_key);
             } catch (thumbError) {
               console.error(`Error generating thumbnail URL for ${upload.thumbnail_key}:`, thumbError);
               // Fall back to full image
@@ -297,7 +407,16 @@ app.get('/api/photos', async (req, res) => {
       })
     );
 
-    res.json(uploadsWithFreshUrls);
+    res.json({
+      photos: uploadsWithFreshUrls,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: offset + limit < totalCount
+      }
+    });
   } catch (error) {
     console.error('Error fetching photos:', error);
     res.status(500).json({ error: 'Failed to fetch photos' });
@@ -309,6 +428,7 @@ app.get('/api/photos', async (req, res) => {
  * Get upload statistics
  */
 app.get('/api/stats', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=30'); // 30 second cache
   try {
     const stats = await dbOps.getStats();
     res.json(stats);
@@ -500,7 +620,7 @@ app.post('/api/download-zip', async (req, res) => {
  * POST /api/request-download
  * Generate signed download token and send link via email
  */
-app.post('/api/request-download', async (req, res) => {
+app.post('/api/request-download', downloadLimiter, async (req, res) => {
   try {
     const { photoIds, email } = req.body;
 
@@ -655,6 +775,11 @@ app.post('/api/request-download', async (req, res) => {
  * Implements hybrid caching: stores zip for 1 hour, regenerates if needed
  */
 app.get('/api/download/:token', async (req, res) => {
+  // Check concurrency limit
+  if (activeZipGenerations >= MAX_CONCURRENT_ZIPS) {
+    return res.status(429).send('Too many download requests. Please try again in a moment.');
+  }
+
   try {
     const { token } = req.params;
 
@@ -770,16 +895,22 @@ app.get('/api/download/:token', async (req, res) => {
       `);
     }
 
+    activeZipGenerations++;
+
     // Create zip archive
     const archive = archiver('zip', {
-      zlib: { level: 9 } // Maximum compression
+      zlib: { level: 6 } // Balanced compression
     });
 
-    const chunks = [];
-    archive.on('data', (chunk) => chunks.push(chunk));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="wedding-photos-${Date.now()}.zip"`);
+
+    // Pipe directly to response
+    archive.pipe(res);
+
     archive.on('error', (err) => {
       console.error('Archive error:', err);
-      throw err;
+      // Can't send error response as headers are already sent
     });
 
     // Download each photo and add to zip
@@ -788,44 +919,26 @@ app.get('/api/download/:token', async (req, res) => {
         // Generate fresh presigned URL
         const freshUrl = await s3Ops.getPresignedDownloadUrl(photo.s3_key);
 
-        // Download photo from S3
+        // Download photo from S3 using stream
         const response = await axios.get(freshUrl, {
-          responseType: 'arraybuffer',
+          responseType: 'stream',
           timeout: 30000,
         });
 
         // Add to zip with original filename
-        archive.append(Buffer.from(response.data), { name: photo.filename });
+        archive.append(response.data, { name: photo.filename });
       } catch (error) {
         console.error(`Failed to add ${photo.filename}:`, error.message);
         // Continue with other photos
       }
     }
 
-    // Finalize the archive
-    const finalizePromise = new Promise((resolve, reject) => {
-      archive.on('finish', resolve);
-      archive.on('error', reject);
-    });
-
-    archive.finalize();
-    await finalizePromise;
-
-    const zipBuffer = Buffer.concat(chunks);
-    console.log(`📦 Zip created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
-
-    // Save to cache
-    fs.writeFileSync(cacheFilePath, zipBuffer);
-    console.log(`💾 Cached zip for future requests`);
-
-    // Send zip to client
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="wedding-photos-${Date.now()}.zip"`);
-    res.send(zipBuffer);
+    await archive.finalize();
 
   } catch (error) {
     console.error('Error processing download:', error.message);
-    res.status(500).send(`
+    if (!res.headersSent) {
+      res.status(500).send(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -845,6 +958,9 @@ app.get('/api/download/:token', async (req, res) => {
       </body>
       </html>
     `);
+    }
+  } finally {
+    if (activeZipGenerations > 0) activeZipGenerations--;
   }
 });
 

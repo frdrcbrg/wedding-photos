@@ -68,13 +68,20 @@ const dbOps = {
     const sql = `
       SELECT
         COUNT(*) as total_uploads,
-        SUM(CASE WHEN file_type = 'photo' THEN 1 ELSE 0 END) as photo_count,
-        SUM(CASE WHEN file_type = 'video' THEN 1 ELSE 0 END) as video_count,
+        COALESCE(SUM(CASE WHEN file_type = 'photo' THEN 1 ELSE 0 END), 0) as photo_count,
+        COALESCE(SUM(CASE WHEN file_type = 'video' THEN 1 ELSE 0 END), 0) as video_count,
         COUNT(DISTINCT uploaded_by) as unique_contributors
       FROM uploads
     `;
     const result = await pool.query(sql);
-    return result.rows[0];
+    // Ensure numeric types are returned
+    const stats = result.rows[0];
+    return {
+      total_uploads: parseInt(stats.total_uploads) || 0,
+      photo_count: parseInt(stats.photo_count) || 0,
+      video_count: parseInt(stats.video_count) || 0,
+      unique_contributors: parseInt(stats.unique_contributors) || 0,
+    };
   },
 
   // Delete upload by ID (admin function)

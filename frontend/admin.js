@@ -173,11 +173,13 @@ async function handleDelete(photoId) {
       // Remove from UI
       const item = document.querySelector(`.admin-item[data-id="${photoId}"]`);
       item.style.opacity = '0';
-      setTimeout(() => {
+      setTimeout(async () => {
         item.remove();
-        // Reload to update counts
-        loadPhotos();
-        loadStats();
+        // Update local photos array
+        photos = photos.filter(p => p.id != photoId);
+        // Reload stats first, then photos
+        await loadStats();
+        await loadPhotos();
       }, 300);
     } else {
       const data = await response.json();
@@ -253,12 +255,21 @@ async function loadStats() {
 
     const stats = await response.json();
 
-    adminTotalCount.textContent = stats.total_uploads || 0;
-    adminPhotoCount.textContent = stats.photo_count || 0;
-    adminVideoCount.textContent = stats.video_count || 0;
+    // Force numeric conversion and default to 0
+    const totalUploads = parseInt(stats.total_uploads) || 0;
+    const photoCount = parseInt(stats.photo_count) || 0;
+    const videoCount = parseInt(stats.video_count) || 0;
+
+    adminTotalCount.textContent = totalUploads;
+    adminPhotoCount.textContent = photoCount;
+    adminVideoCount.textContent = videoCount;
 
   } catch (error) {
     console.error('Stats loading error:', error);
+    // Set to 0 on error
+    adminTotalCount.textContent = 0;
+    adminPhotoCount.textContent = 0;
+    adminVideoCount.textContent = 0;
   }
 }
 

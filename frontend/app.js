@@ -346,12 +346,21 @@ async function loadStats() {
 
     const stats = await response.json();
 
-    totalUploads.textContent = stats.total_uploads || 0;
-    photoCount.textContent = stats.photo_count || 0;
-    videoCount.textContent = stats.video_count || 0;
+    // Force numeric conversion and default to 0
+    const totalCount = parseInt(stats.total_uploads) || 0;
+    const photosCnt = parseInt(stats.photo_count) || 0;
+    const videosCnt = parseInt(stats.video_count) || 0;
+
+    totalUploads.textContent = totalCount;
+    photoCount.textContent = photosCnt;
+    videoCount.textContent = videosCnt;
 
   } catch (error) {
     console.error('Stats loading error:', error);
+    // Set to 0 on error
+    totalUploads.textContent = 0;
+    photoCount.textContent = 0;
+    videoCount.textContent = 0;
   }
 }
 

@@ -59,6 +59,7 @@ async function initializeDatabase() {
         message TEXT,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         thumbnail_key TEXT,
+        preview_key TEXT,
         taken_at TIMESTAMP
       )
     `;
@@ -69,6 +70,11 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS thumbnail_key TEXT
     `;
 
+    const addPreviewColumnQuery = `
+      ALTER TABLE uploads
+      ADD COLUMN IF NOT EXISTS preview_key TEXT
+    `;
+
     const addTakenAtColumnQuery = `
       ALTER TABLE uploads
       ADD COLUMN IF NOT EXISTS taken_at TIMESTAMP
@@ -76,6 +82,7 @@ async function initializeDatabase() {
 
     await appClient.query(createTableQuery);
     await appClient.query(addThumbnailColumnQuery);
+    await appClient.query(addPreviewColumnQuery);
     await appClient.query(addTakenAtColumnQuery);
     console.log('✅ Table "uploads" initialized');
 

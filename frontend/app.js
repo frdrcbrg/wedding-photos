@@ -375,13 +375,13 @@ function openLightbox(photoIndex) {
   if (isVideo) {
     lightboxImage.style.display = 'none';
     lightboxVideo.style.display = 'block';
-    lightboxVideo.src = photo.s3_url;
+    lightboxVideo.src = photo.preview_url || photo.s3_url;
     lightboxDownload.href = photo.s3_url;
     lightboxDownload.download = photo.filename;
   } else {
     lightboxVideo.style.display = 'none';
     lightboxImage.style.display = 'block';
-    lightboxImage.src = photo.s3_url;
+    lightboxImage.src = photo.preview_url || photo.s3_url;
     lightboxDownload.href = photo.s3_url;
     lightboxDownload.download = photo.filename;
   }
@@ -401,13 +401,13 @@ function preloadAdjacentImages(currentIndex) {
   // Preload next image
   if (currentPhotos[nextIndex] && currentPhotos[nextIndex].file_type === 'photo') {
     const nextImg = new Image();
-    nextImg.src = currentPhotos[nextIndex].s3_url;
+    nextImg.src = currentPhotos[nextIndex].preview_url || currentPhotos[nextIndex].s3_url;
   }
 
   // Preload previous image
   if (currentPhotos[prevIndex] && currentPhotos[prevIndex].file_type === 'photo') {
     const prevImg = new Image();
-    prevImg.src = currentPhotos[prevIndex].s3_url;
+    prevImg.src = currentPhotos[prevIndex].preview_url || currentPhotos[prevIndex].s3_url;
   }
 }
 

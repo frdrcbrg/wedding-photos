@@ -16,7 +16,7 @@ require('dotenv').config();
 
 const dbOps = require('./database');
 const s3Ops = require('./s3');
-const { generateThumbnail } = require('./thumbnail');
+const { generateResizedImages } = require('./thumbnail');
 const { testSMTPConnection } = require('./smtp-preflight');
 
 const app = express();
@@ -235,17 +235,21 @@ app.post('/api/confirm', async (req, res) => {
 
     const uploadId = result.lastInsertRowid;
 
-    // Generate thumbnail asynchronously (don't block response)
+    // Generate resized images (thumbnail + preview) asynchronously (don't block response)
     if (fileType === 'photo') {
-      generateThumbnail(s3Url, s3Key)
-        .then(async (thumbnailKey) => {
+      generateResizedImages(s3Url, s3Key)
+        .then(async ({ thumbnailKey, previewKey }) => {
           if (thumbnailKey) {
             await dbOps.updateThumbnailKey(uploadId, thumbnailKey);
             console.log(`Thumbnail generated for upload ${uploadId}`);
           }
+          if (previewKey) {
+            await dbOps.updatePreviewKey(uploadId, previewKey);
+            console.log(`Preview generated for upload ${uploadId}`);
+          }
         })
         .catch((error) => {
-          console.error(`Failed to generate thumbnail for upload ${uploadId}:`, error);
+          console.error(`Failed to generate resized images for upload ${uploadId}:`, error);
         });
     }
 
@@ -268,7 +272,7 @@ app.get('/api/photos', async (req, res) => {
   try {
     const uploads = await dbOps.getAllUploads();
 
-    // Generate fresh presigned URLs for each upload (full image and thumbnail)
+    // Generate fresh presigned URLs for each upload (full image, preview, and thumbnail)
     const uploadsWithFreshUrls = await Promise.all(
       uploads.map(async (upload) => {
         try {
@@ -285,10 +289,22 @@ app.get('/api/photos', async (req, res) => {
             }
           }
 
+          // Generate preview URL if preview exists
+          let previewUrl = freshUrl; // Default to full image
+          if (upload.preview_key) {
+            try {
+              previewUrl = await s3Ops.getPresignedDownloadUrl(upload.preview_key);
+            } catch (previewError) {
+              console.error(`Error generating preview URL for ${upload.preview_key}:`, previewError);
+              // Fall back to full image
+            }
+          }
+
           return {
             ...upload,
-            s3_url: freshUrl, // Full image URL
-            thumbnail_url: thumbnailUrl, // Thumbnail URL (or full image if no thumbnail)
+            s3_url: freshUrl, // Full image URL (for download)
+            preview_url: previewUrl, // Preview URL (for lightbox)
+            thumbnail_url: thumbnailUrl, // Thumbnail URL (for gallery grid)
           };
         } catch (error) {
           console.error(`Error generating URL for ${upload.s3_key}:`, error);

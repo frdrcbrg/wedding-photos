@@ -53,6 +53,16 @@ const dbOps = {
     await pool.query(sql, [thumbnailKey, id]);
   },
 
+  // Update preview key for an upload
+  updatePreviewKey: async (id, previewKey) => {
+    const sql = `
+      UPDATE uploads
+      SET preview_key = $1
+      WHERE id = $2
+    `;
+    await pool.query(sql, [previewKey, id]);
+  },
+
   // Get all uploads
   getAllUploads: async () => {
     const sql = `

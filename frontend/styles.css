@@ -724,6 +724,87 @@ body {
   }
 }
 
+/* ===== Floating Share Button ===== */
+.floating-share-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: var(--main-color);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.floating-share-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.6);
+}
+
+.floating-share-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+}
+
+/* ===== QR Code Modal ===== */
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 2em;
+  color: var(--charcoal);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+}
+
+.qr-code-container {
+  text-align: center;
+  padding: 30px;
+  background: white;
+  border-radius: 15px;
+  margin: 20px 0;
+}
+
+.qr-code-container img {
+  width: 280px;
+  height: 280px;
+  border: 8px solid var(--main-color-lighter);
+  border-radius: 10px;
+}
+
+.share-url {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.share-url p {
+  font-size: 1.1em;
+  color: var(--main-color);
+  font-weight: 500;
+  margin: 0;
+}
+
 @media (max-width: 480px) {
   .title {
     font-size: 2em;
@@ -735,5 +816,22 @@ body {
 
   .stats {
     gap: 20px;
+  }
+
+  .floating-share-btn {
+    width: 48px;
+    height: 48px;
+    top: 15px;
+    right: 15px;
+  }
+
+  .floating-share-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .qr-code-container img {
+    width: 220px;
+    height: 220px;
   }
 }

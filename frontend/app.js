@@ -24,6 +24,11 @@ const closeLightbox = document.getElementById('closeLightbox');
 const lightboxPrev = document.getElementById('lightboxPrev');
 const lightboxNext = document.getElementById('lightboxNext');
 
+const floatingShareBtn = document.getElementById('floatingShareBtn');
+const qrModal = document.getElementById('qrModal');
+const closeQrModal = document.getElementById('closeQrModal');
+const qrCodeImage = document.getElementById('qrCodeImage');
+
 // ===== State =====
 let isAuthenticated = false;
 let currentPhotos = [];
@@ -41,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       isAuthenticated = true;
       accessModal.classList.add('hidden');
       mainContent.classList.remove('hidden');
+      floatingShareBtn.classList.remove('hidden');
       loadGallery();
     } else {
       // Check if already authenticated
@@ -73,6 +79,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox) closeLightboxModal();
   });
+
+  // Share button listeners
+  floatingShareBtn.addEventListener('click', openShareModal);
+  closeQrModal.addEventListener('click', closeShareModal);
+  qrModal.addEventListener('click', (e) => {
+    if (e.target === qrModal) closeShareModal();
+  });
 });
 
 // ===== Access Control =====
@@ -98,6 +111,9 @@ async function verifyAccess(code, silent = false) {
       sessionStorage.setItem('accessCode', code);
       accessModal.classList.add('hidden');
       mainContent.classList.remove('hidden');
+
+      // Show floating share button
+      floatingShareBtn.classList.remove('hidden');
 
       // Load content
       loadGallery();
@@ -258,7 +274,7 @@ async function loadGallery() {
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
             <circle cx="12" cy="13" r="4"></circle>
           </svg>
-          <p>Add Photos</p>
+          <p>Teilen</p>
         </div>
       </div>
     `;
@@ -472,6 +488,22 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ===== Share Modal Functions =====
+function openShareModal() {
+  // Generate QR code using QR Server API
+  const url = 'https://wedding.fredericberg.de';
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}`;
+
+  qrCodeImage.src = qrApiUrl;
+  qrModal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeShareModal() {
+  qrModal.classList.add('hidden');
+  document.body.style.overflow = 'auto';
 }
 
 // ===== Service Worker (Optional - for offline support) =====

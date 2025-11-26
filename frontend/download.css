@@ -379,33 +379,7 @@ body {
   pointer-events: auto;
 }
 
-/* Checkmark Badge */
-.selection-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  background: var(--main-color);
-  border-radius: 50%;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 11;
-}
-
-.gallery-item.selected .selection-badge {
-  display: flex;
-}
-
-.selection-badge svg {
-  width: 18px;
-  height: 18px;
-  stroke: white;
-  stroke-width: 3;
-  fill: none;
-}
+/* Checkmark Badge - Removed to avoid overlap with checkbox */
 
 .gallery-item-overlay {
   position: absolute;

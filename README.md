@@ -27,19 +27,21 @@ A beautiful, minimalistic web application for sharing wedding photos and videos 
 - **🎯 Lightweight** - No frontend frameworks, pure vanilla JavaScript
 - **🐳 Docker Ready** - Easy deployment with Docker
 - **💾 PostgreSQL Database** - Reliable, scalable data storage
-- **⚡ Real-time Stats** - Track total uploads, photos, and videos
+- **🖼️ Smart Image Optimization** - Three-tier system (thumbnail/preview/full-size)
+- **📱 Mobile Optimized** - Touch-friendly navigation, no double-tap zoom issues
+- **⚡ Image Preloading** - Next/previous photos preloaded for instant navigation
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-│   Browser   │────────▶│   Backend   │────────▶│  S3 Bucket  │
-│  (Frontend) │◀────────│   (Node.js) │◀────────│  (Storage)  │
-└─────────────┘         └─────────────┘         └─────────────┘
-                              │
-                              ▼
+┌─────────────┐         ┌─────────────┐         ┌─────────────────┐
+│   Browser   │────────▶│   Backend   │────────▶│   S3 Bucket     │
+│  (Frontend) │◀────────│   (Node.js) │◀────────│  - Full-size    │
+└─────────────┘         └─────────────┘         │  - Previews     │
+                              │                 │  - Thumbnails   │
+                              ▼                 └─────────────────┘
                         ┌──────────┐
-                        │  SQLite  │
+                        │PostgreSQL│
                         │ Database │
                         └──────────┘
 ```

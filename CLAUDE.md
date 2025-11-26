@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Recent Session Summary (2025-11-26)
+
+**New Features and Improvements:**
+1. **Preview Image System** - Three-tier image optimization
+   - Thumbnail (300x300): Gallery grid display
+   - Preview (1920px): Lightbox viewing for faster loading
+   - Full-size: Downloads only
+   - Automatic generation on upload with `generateResizedImages()`
+   - Database column: `preview_key` added
+2. **UI/UX Improvements:**
+   - Fixed stats counter bug (now correctly shows 0 after deleting last photo)
+   - Improved mobile upload button alignment (Android/Chrome)
+   - Disabled double-tap zoom on lightbox for iOS
+   - Removed stats display from main page
+   - Removed "Shared Memories" heading
+   - Added German tagline: "Teilt eure schönsten Momente mit uns!"
+   - Reduced whitespace between tagline and gallery for more compact layout
+
+**Technical Details:**
+- Preview images stored at `uploads/previews/` in S3
+- Lightbox now uses preview_url instead of s3_url for faster loading
+- Download buttons still use full-size s3_url
+- Image preloading uses preview images for next/prev navigation
+- All pages (main + download) updated to use preview system
+- Admin page uses thumbnails only (no lightbox)
+
 ## Recent Session Summary (2025-11-19)
 
 **Working Configuration:**

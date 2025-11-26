@@ -54,6 +54,7 @@ let selectedPhotos = new Set();
 let maxSelection = 50;
 let showingSelectedOnly = false;
 let basketExpanded = false;
+let lastSelectedIndex = -1; // For shift-click range selection
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', async () => {
@@ -239,12 +240,12 @@ function loadMorePhotos() {
         openLightbox(photoIndex);
       });
 
-      // Checkbox click handler
+      // Checkbox click handler with keyboard modifiers
       const checkbox = item.querySelector('.selection-checkbox');
       if (checkbox) {
         checkbox.addEventListener('click', (e) => {
           e.stopPropagation();
-          handlePhotoSelection(item.dataset.id, checkbox.checked);
+          handlePhotoSelection(item.dataset.id, checkbox.checked, e);
         });
       }
     }
@@ -416,8 +417,19 @@ function previousPhoto() {
   navigateToPhoto(-1);
 }
 
-// Keyboard navigation
+// Keyboard navigation and shortcuts
 document.addEventListener('keydown', (e) => {
+  // Cmd/Ctrl + A to select all photos (when not in lightbox or modal)
+  if ((e.metaKey || e.ctrlKey) && e.key === 'a' &&
+      lightbox.classList.contains('hidden') &&
+      emailModal.classList.contains('hidden') &&
+      accessModal.classList.contains('hidden')) {
+    e.preventDefault();
+    selectAllPhotos();
+    return;
+  }
+
+  // Lightbox keyboard navigation
   if (lightbox.classList.contains('hidden')) return;
 
   if (e.key === 'Escape') {
@@ -483,7 +495,48 @@ function escapeHtml(text) {
 }
 
 
-function handlePhotoSelection(photoId, isSelected) {
+function handlePhotoSelection(photoId, isSelected, event = null) {
+  const currentIndex = displayedPhotos.findIndex(p => p.id.toString() === photoId.toString());
+
+  // Handle Shift-click for range selection
+  if (event && event.shiftKey && lastSelectedIndex !== -1 && currentIndex !== -1) {
+    const start = Math.min(lastSelectedIndex, currentIndex);
+    const end = Math.max(lastSelectedIndex, currentIndex);
+
+    // Select all photos in range
+    const photosToSelect = [];
+    for (let i = start; i <= end; i++) {
+      photosToSelect.push(displayedPhotos[i].id.toString());
+    }
+
+    // Check if selection would exceed max
+    const newSelectionCount = new Set([...selectedPhotos, ...photosToSelect]).size;
+    if (newSelectionCount > maxSelection) {
+      alert(`Du kannst maximal ${maxSelection} Fotos auswählen.`);
+      // Uncheck the checkbox that triggered this
+      const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${photoId}"]`);
+      if (checkbox) checkbox.checked = false;
+      return;
+    }
+
+    // Add all photos in range
+    photosToSelect.forEach(id => {
+      selectedPhotos.add(id);
+      const item = document.querySelector(`.gallery-item[data-id="${id}"]`);
+      if (item) item.classList.add('selected');
+      const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${id}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+
+    lastSelectedIndex = currentIndex;
+    updateStats();
+    updateSelectionUI();
+    updateBasketUI();
+    updateLightboxSelectionState();
+    return;
+  }
+
+  // Normal selection (no modifier keys)
   if (isSelected) {
     // Check if max selection reached
     if (selectedPhotos.size >= maxSelection) {
@@ -506,6 +559,11 @@ function handlePhotoSelection(photoId, isSelected) {
     } else {
       galleryItem.classList.remove('selected');
     }
+  }
+
+  // Update last selected index for future shift-clicks
+  if (currentIndex !== -1) {
+    lastSelectedIndex = currentIndex;
   }
 
   // Update stats
@@ -653,6 +711,32 @@ function handleBasketDownload() {
   floatingBasket.classList.remove('expanded');
   // Show email modal
   showEmailModal();
+}
+
+function selectAllPhotos() {
+  // Check if selecting all would exceed max
+  const photosToSelect = displayedPhotos.slice(0, maxSelection);
+
+  if (displayedPhotos.length > maxSelection) {
+    alert(`Du kannst maximal ${maxSelection} Fotos auswählen. Die ersten ${maxSelection} werden ausgewählt.`);
+  }
+
+  // Select photos up to max limit
+  photosToSelect.forEach(photo => {
+    const photoId = photo.id.toString();
+    selectedPhotos.add(photoId);
+
+    const item = document.querySelector(`.gallery-item[data-id="${photoId}"]`);
+    if (item) item.classList.add('selected');
+
+    const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${photoId}"]`);
+    if (checkbox) checkbox.checked = true;
+  });
+
+  updateStats();
+  updateSelectionUI();
+  updateBasketUI();
+  updateLightboxSelectionState();
 }
 
 function clearAllSelections() {

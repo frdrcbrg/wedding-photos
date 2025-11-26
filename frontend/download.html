@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Download photos from Martha & Frédéric's Wedding - 29. November 2025">
-  <title>Download Photos | Martha & Frédéric Wedding</title>
+  <meta name="description" content="Fotos herunterladen von Martha & Frédérics Hochzeit - 29. November 2025">
+  <title>Fotos herunterladen | Martha & Frédéric Hochzeit</title>
   <link rel="stylesheet" href="download.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,17 +17,17 @@
       <div class="modal-header">
         <h1>❄️</h1>
         <h2>Martha & Frédéric</h2>
-        <p>Please enter the access code to view the gallery</p>
+        <p>Bitte gib den Zugangscode ein, um die Galerie anzuzeigen</p>
       </div>
       <form id="accessForm">
         <input
           type="text"
           id="accessCodeInput"
-          placeholder="Enter access code"
+          placeholder="Zugangscode eingeben"
           autocomplete="off"
           required
         >
-        <button type="submit" class="btn-primary">Enter</button>
+        <button type="submit" class="btn-primary">Eingeben</button>
         <p id="accessError" class="error-message"></p>
       </form>
     </div>
@@ -41,21 +41,17 @@
         <div class="logo-container">
           <img src="logo.png" alt="Wedding Logo" class="wedding-logo">
         </div>
-        <h1 class="title">Download Wedding Photos</h1>
-        <p class="subtitle">Select your favorite memories from our special day</p>
+        <h1 class="title">Hochzeitsfotos herunterladen</h1>
+        <p class="subtitle">Wähle deine liebsten Erinnerungen aus unserem besonderen Tag</p>
 
         <div id="stats" class="stats">
           <div class="stat-item">
             <span class="stat-number" id="totalUploads">0</span>
-            <span class="stat-label">memories</span>
+            <span class="stat-label">Gesamt</span>
           </div>
           <div class="stat-item">
-            <span class="stat-number" id="photoCount">0</span>
-            <span class="stat-label">photos</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-number" id="videoCount">0</span>
-            <span class="stat-label">videos</span>
+            <span class="stat-number" id="selectedCount">0</span>
+            <span class="stat-label">Ausgewählt</span>
           </div>
         </div>
       </div>
@@ -65,10 +61,10 @@
     <section class="gallery-section">
       <div class="container">
         <div id="gallery" class="masonry-gallery">
-          <div class="loading">Loading gallery...</div>
+          <div class="loading">Galerie wird geladen...</div>
         </div>
         <div id="loadMoreContainer" class="load-more-container hidden">
-          <button id="loadMoreBtn" class="btn-primary">Load More</button>
+          <button id="loadMoreBtn" class="btn-primary">Mehr laden</button>
         </div>
       </div>
     </section>
@@ -109,19 +105,19 @@
   <div id="emailModal" class="modal hidden">
     <div class="modal-content frosted">
       <div class="modal-header">
-        <h2>Request Download</h2>
-        <p>Enter your email to receive the download link</p>
+        <h2>Download anfordern</h2>
+        <p>Gib deine E-Mail-Adresse ein, um den Download-Link zu erhalten</p>
       </div>
       <form id="emailForm">
         <input
           type="email"
           id="emailInput"
-          placeholder="your.email@example.com"
+          placeholder="deine.email@beispiel.de"
           autocomplete="email"
           required
         >
-        <button type="submit" class="btn-primary">Send Download Link</button>
-        <button type="button" id="cancelEmailBtn" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Download-Link senden</button>
+        <button type="button" id="cancelEmailBtn" class="btn-secondary">Abbrechen</button>
         <p id="emailError" class="error-message"></p>
         <p id="emailSuccess" class="success-message"></p>
       </form>
@@ -135,7 +131,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
         </svg>
-        <span>Show Selected</span>
+        <span>Ausgewählte anzeigen</span>
       </button>
       <button id="requestDownloadBtn" class="basket-action-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -143,14 +139,14 @@
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        <span>Request Download</span>
+        <span>Download anfordern</span>
       </button>
       <button id="clearSelectionBtn" class="basket-action-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
-        <span>Clear All</span>
+        <span>Alle entfernen</span>
       </button>
     </div>
     <button id="basketFab" class="basket-fab">

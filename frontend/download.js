@@ -23,8 +23,7 @@ const lightboxPrev = document.getElementById('lightboxPrev');
 const lightboxNext = document.getElementById('lightboxNext');
 
 const totalUploads = document.getElementById('totalUploads');
-const photoCount = document.getElementById('photoCount');
-const videoCount = document.getElementById('videoCount');
+const selectedCount = document.getElementById('selectedCount');
 
 // Email modal elements
 const emailModal = document.getElementById('emailModal');
@@ -72,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       accessModal.classList.add('hidden');
       mainContent.classList.remove('hidden');
       await loadGallery();
-      loadStats();
+      updateStats();
     } else {
       // Check if already authenticated
       const savedCode = sessionStorage.getItem('accessCode');
@@ -148,10 +147,10 @@ async function verifyAccess(code, silent = false) {
 
       // Load content
       await loadGallery();
-      loadStats();
+      updateStats();
     } else {
       if (!silent) {
-        accessError.textContent = data.error || 'Invalid access code';
+        accessError.textContent = data.error || 'Ungültiger Zugangscode';
         accessCodeInput.value = '';
         accessCodeInput.focus();
       }
@@ -195,7 +194,7 @@ async function loadGallery() {
     console.error('Gallery loading error:', error);
     gallery.innerHTML = `
       <div class="loading">
-        Failed to load gallery. Please refresh the page.
+        Fehler beim Laden der Galerie. Bitte Seite neu laden.
       </div>
     `;
   }
@@ -330,24 +329,10 @@ function setupLazyLoading() {
   });
 }
 
-// ===== Stats Loading =====
-async function loadStats() {
-  try {
-    const response = await fetch(`${API_BASE}/api/stats`);
-
-    if (!response.ok) {
-      throw new Error('Failed to load stats');
-    }
-
-    const stats = await response.json();
-
-    totalUploads.textContent = stats.total_uploads || 0;
-    photoCount.textContent = stats.photo_count || 0;
-    videoCount.textContent = stats.video_count || 0;
-
-  } catch (error) {
-    console.error('Stats loading error:', error);
-  }
+// ===== Stats Update =====
+function updateStats() {
+  totalUploads.textContent = allPhotos.length || 0;
+  selectedCount.textContent = selectedPhotos.size || 0;
 }
 
 // ===== Lightbox =====
@@ -502,7 +487,7 @@ function handlePhotoSelection(photoId, isSelected) {
   if (isSelected) {
     // Check if max selection reached
     if (selectedPhotos.size >= maxSelection) {
-      alert(`You can only select up to ${maxSelection} photos.`);
+      alert(`Du kannst maximal ${maxSelection} Fotos auswählen.`);
       // Uncheck the checkbox
       const checkbox = document.querySelector(`.selection-checkbox[data-photo-id="${photoId}"]`);
       if (checkbox) checkbox.checked = false;
@@ -522,6 +507,9 @@ function handlePhotoSelection(photoId, isSelected) {
       galleryItem.classList.remove('selected');
     }
   }
+
+  // Update stats
+  updateStats();
 
   updateSelectionUI();
   updateBasketUI();
@@ -637,10 +625,10 @@ function toggleFilter() {
 
   if (showingSelectedOnly) {
     filterSelectedBtn.classList.add('active');
-    filterSelectedBtn.querySelector('span').textContent = 'Show All';
+    filterSelectedBtn.querySelector('span').textContent = 'Alle anzeigen';
   } else {
     filterSelectedBtn.classList.remove('active');
-    filterSelectedBtn.querySelector('span').textContent = 'Show Selected';
+    filterSelectedBtn.querySelector('span').textContent = 'Ausgewählte anzeigen';
   }
 
   // Reload gallery with filtered/all photos
@@ -683,6 +671,7 @@ function clearAllSelections() {
     toggleFilter();
   }
 
+  updateStats();
   updateSelectionUI();
   updateBasketUI();
   updateLightboxSelectionState();

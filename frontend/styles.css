@@ -199,6 +199,14 @@ body {
   font-size: 1.1em;
   color: var(--charcoal);
   opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.tagline {
+  font-size: 1em;
+  color: var(--main-color);
+  opacity: 0.9;
+  font-style: italic;
   margin-bottom: 30px;
 }
 

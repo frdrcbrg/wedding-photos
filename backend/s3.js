@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const fs = require('fs');
 const path = require('path');
@@ -173,6 +173,20 @@ const s3Ops = {
 
     // Generate presigned URL (valid for 1 hour)
     return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+  },
+
+  /**
+   * Delete file from S3
+   * @param {string} s3Key - S3 object key
+   * @returns {Promise<void>}
+   */
+  deleteFile: async (s3Key) => {
+    const command = new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+    });
+
+    await s3Client.send(command);
   },
 
   /**

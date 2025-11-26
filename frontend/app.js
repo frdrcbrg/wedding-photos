@@ -164,19 +164,39 @@ async function startUploadProcess(files) {
   try {
     const totalFiles = files.length;
     let completedFiles = 0;
+    let duplicateCount = 0;
 
     for (const file of files) {
       uploadStatus.textContent = `Uploading ${completedFiles + 1} of ${totalFiles}...`;
 
-      await uploadFile(file);
+      try {
+        await uploadFile(file);
+        completedFiles++;
+      } catch (error) {
+        if (error.message === 'DUPLICATE') {
+          console.log(`Skipped duplicate: ${file.name}`);
+          duplicateCount++;
+          completedFiles++; // Count as "processed" even though skipped
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
 
-      completedFiles++;
       const progress = (completedFiles / totalFiles) * 100;
       progressFill.style.width = `${progress}%`;
     }
 
     // Success!
-    uploadStatus.textContent = '✨ Upload complete! Thank you for sharing.';
+    if (duplicateCount > 0) {
+      const uploadedCount = completedFiles - duplicateCount;
+      if (uploadedCount > 0) {
+        uploadStatus.textContent = `✨ ${uploadedCount} neu hochgeladen, ${duplicateCount} Duplikat${duplicateCount > 1 ? 'e' : ''} übersprungen.`;
+      } else {
+        uploadStatus.textContent = `ℹ️ Alle Dateien waren bereits hochgeladen (${duplicateCount} Duplikat${duplicateCount > 1 ? 'e' : ''}).`;
+      }
+    } else {
+      uploadStatus.textContent = '✨ Upload abgeschlossen! Danke fürs Teilen.';
+    }
     progressFill.style.width = '100%';
 
     // Reset and close modal
@@ -191,7 +211,7 @@ async function startUploadProcess(files) {
 
   } catch (error) {
     console.error('Upload error:', error);
-    uploadStatus.textContent = '❌ Upload failed. Please try again.';
+    uploadStatus.textContent = '❌ Upload fehlgeschlagen. Bitte erneut versuchen.';
 
     setTimeout(() => {
       uploadModal.classList.add('hidden');
@@ -248,6 +268,13 @@ async function uploadFile(file) {
   });
 
   if (!confirmResponse.ok) {
+    const errorData = await confirmResponse.json();
+
+    // Handle duplicate file error
+    if (confirmResponse.status === 409 && errorData.error === 'duplicate') {
+      throw new Error('DUPLICATE');
+    }
+
     throw new Error('Failed to confirm upload');
   }
 

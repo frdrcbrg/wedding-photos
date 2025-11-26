@@ -21,11 +21,23 @@ pool.query('SELECT NOW()', (err, res) => {
 
 // Database operations
 const dbOps = {
+  // Check if file hash already exists
+  checkDuplicateHash: async (fileHash) => {
+    const sql = `
+      SELECT id, filename, uploaded_at
+      FROM uploads
+      WHERE file_hash = $1
+      LIMIT 1
+    `;
+    const result = await pool.query(sql, [fileHash]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  },
+
   // Insert new upload
   insertUpload: async (data) => {
     const sql = `
-      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message, thumbnail_key, taken_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO uploads (filename, s3_key, s3_url, file_type, uploaded_by, message, thumbnail_key, taken_at, file_hash)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
 
@@ -38,6 +50,7 @@ const dbOps = {
       data.message || null,
       data.thumbnail_key || null,
       data.taken_at || null,
+      data.file_hash || null,
     ]);
 
     return { lastInsertRowid: result.rows[0].id };

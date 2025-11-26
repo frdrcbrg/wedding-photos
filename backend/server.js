@@ -219,6 +219,40 @@ app.post('/api/confirm', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Calculate file hash to detect duplicates
+    let fileHash = null;
+    try {
+      console.log(`Calculating hash for ${filename}...`);
+      const response = await axios.get(s3Url, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+
+      // Calculate SHA-256 hash
+      fileHash = crypto.createHash('sha256').update(Buffer.from(response.data)).digest('hex');
+      console.log(`File hash: ${fileHash}`);
+
+      // Check if this file already exists
+      const duplicate = await dbOps.checkDuplicateHash(fileHash);
+      if (duplicate) {
+        console.log(`⚠️  Duplicate file detected: ${filename} (matches ${duplicate.filename})`);
+
+        // Delete the newly uploaded file from S3 since it's a duplicate
+        await s3Ops.deleteFile(s3Key);
+        console.log(`🗑️  Deleted duplicate file from S3: ${s3Key}`);
+
+        return res.status(409).json({
+          error: 'duplicate',
+          message: 'Diese Datei wurde bereits hochgeladen.',
+          originalFilename: duplicate.filename,
+          uploadedAt: duplicate.uploaded_at,
+        });
+      }
+    } catch (hashError) {
+      console.error('Error calculating file hash:', hashError.message);
+      // Continue without hash if calculation fails (better than blocking upload)
+    }
+
     // Extract EXIF date from the uploaded file
     const takenAt = await extractExifDate(s3Url, fileType);
 
@@ -231,6 +265,7 @@ app.post('/api/confirm', async (req, res) => {
       uploaded_by: uploadedBy,
       message: message,
       taken_at: takenAt,
+      file_hash: fileHash,
     });
 
     const uploadId = result.lastInsertRowid;

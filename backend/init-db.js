@@ -60,7 +60,8 @@ async function initializeDatabase() {
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         thumbnail_key TEXT,
         preview_key TEXT,
-        taken_at TIMESTAMP
+        taken_at TIMESTAMP,
+        file_hash TEXT
       )
     `;
 
@@ -80,10 +81,22 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS taken_at TIMESTAMP
     `;
 
+    const addFileHashColumnQuery = `
+      ALTER TABLE uploads
+      ADD COLUMN IF NOT EXISTS file_hash TEXT
+    `;
+
+    // Create index on file_hash for fast duplicate lookups
+    const createHashIndexQuery = `
+      CREATE INDEX IF NOT EXISTS idx_file_hash ON uploads(file_hash)
+    `;
+
     await appClient.query(createTableQuery);
     await appClient.query(addThumbnailColumnQuery);
     await appClient.query(addPreviewColumnQuery);
     await appClient.query(addTakenAtColumnQuery);
+    await appClient.query(addFileHashColumnQuery);
+    await appClient.query(createHashIndexQuery);
     console.log('✅ Table "uploads" initialized');
 
     // Check current record count

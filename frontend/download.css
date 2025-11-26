@@ -507,6 +507,9 @@ body {
   justify-content: center;
   z-index: 2000;
   padding: 20px;
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .lightbox-close {
@@ -610,6 +613,10 @@ body {
   color: white;
   transition: all 0.3s ease;
   z-index: 10;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .lightbox-nav:hover {

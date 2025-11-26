@@ -207,7 +207,7 @@ body {
   color: var(--main-color);
   opacity: 0.9;
   font-style: italic;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
 }
 
 .nav-links {
@@ -384,7 +384,7 @@ body {
 
 /* ===== Gallery Section ===== */
 .gallery-section {
-  padding: 60px 0 100px;
+  padding: 20px 0 100px;
   position: relative;
   z-index: 2;
 }

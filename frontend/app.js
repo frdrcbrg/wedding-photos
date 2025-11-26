@@ -24,10 +24,6 @@ const closeLightbox = document.getElementById('closeLightbox');
 const lightboxPrev = document.getElementById('lightboxPrev');
 const lightboxNext = document.getElementById('lightboxNext');
 
-const totalUploads = document.getElementById('totalUploads');
-const photoCount = document.getElementById('photoCount');
-const videoCount = document.getElementById('videoCount');
-
 // ===== State =====
 let isAuthenticated = false;
 let currentPhotos = [];
@@ -46,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       accessModal.classList.add('hidden');
       mainContent.classList.remove('hidden');
       loadGallery();
-      loadStats();
     } else {
       // Check if already authenticated
       const savedCode = sessionStorage.getItem('accessCode');
@@ -106,7 +101,6 @@ async function verifyAccess(code, silent = false) {
 
       // Load content
       loadGallery();
-      loadStats();
     } else {
       if (!silent) {
         accessError.textContent = data.error || 'Invalid access code';
@@ -177,7 +171,6 @@ async function startUploadProcess(files) {
 
       // Reload gallery
       loadGallery();
-      loadStats();
     }, 2000);
 
   } catch (error) {
@@ -333,35 +326,6 @@ function createGalleryItem(photo) {
       </div>
     </div>
   `;
-}
-
-// ===== Stats Loading =====
-async function loadStats() {
-  try {
-    const response = await fetch(`${API_BASE}/api/stats`);
-
-    if (!response.ok) {
-      throw new Error('Failed to load stats');
-    }
-
-    const stats = await response.json();
-
-    // Force numeric conversion and default to 0
-    const totalCount = parseInt(stats.total_uploads) || 0;
-    const photosCnt = parseInt(stats.photo_count) || 0;
-    const videosCnt = parseInt(stats.video_count) || 0;
-
-    totalUploads.textContent = totalCount;
-    photoCount.textContent = photosCnt;
-    videoCount.textContent = videosCnt;
-
-  } catch (error) {
-    console.error('Stats loading error:', error);
-    // Set to 0 on error
-    totalUploads.textContent = 0;
-    photoCount.textContent = 0;
-    videoCount.textContent = 0;
-  }
 }
 
 // ===== Lightbox =====

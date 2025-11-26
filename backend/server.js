@@ -567,22 +567,26 @@ app.post('/api/request-download', async (req, res) => {
       await resend.emails.send({
         from: process.env.EMAIL_FROM || 'noreply@fredericberg.de',
         to: email,
-        subject: 'Your Wedding Photos - Martha & Frédéric',
+        subject: 'Eure Hochzeitsfotos - Martha & Frédéric',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #ae9883;">Your Wedding Photos</h2>
-            <p>Thank you for attending our special day!</p>
-            <p>You've requested ${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'} from our wedding.</p>
+            <h2 style="color: #ae9883;">Eure Hochzeitsfotos</h2>
+            <p>Vielen Dank, dass ihr dabei wart!</p>
+            <p>Ihr habt ${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} von unserer Hochzeit ausgewählt.</p>
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="${downloadUrl}"
                  style="background-color: #ae9883; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                Download Photos
+                Fotos herunterladen
               </a>
             </div>
 
             <p style="color: #666; font-size: 0.9em;">
-              ⏰ This download link will expire in 7 days.
+              ⏰ Dieser Download-Link läuft in 7 Tagen ab.
+            </p>
+
+            <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
+              💡 Der erste Download kann 30-60 Sekunden dauern, während die ZIP-Datei vorbereitet wird. Nachfolgende Downloads sind sofort verfügbar.
             </p>
 
             <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
@@ -612,22 +616,26 @@ app.post('/api/request-download', async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_FROM || process.env.SMTP_USER,
         to: email,
-        subject: 'Your Wedding Photos - Martha & Frédéric',
+        subject: 'Eure Hochzeitsfotos - Martha & Frédéric',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #ae9883;">Your Wedding Photos</h2>
-            <p>Thank you for attending our special day!</p>
-            <p>You've requested ${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'photo' : 'photos'} from our wedding.</p>
+            <h2 style="color: #ae9883;">Eure Hochzeitsfotos</h2>
+            <p>Vielen Dank, dass ihr dabei wart!</p>
+            <p>Ihr habt ${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} von unserer Hochzeit ausgewählt.</p>
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="${downloadUrl}"
                  style="background-color: #ae9883; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                Download Photos
+                Fotos herunterladen
               </a>
             </div>
 
             <p style="color: #666; font-size: 0.9em;">
-              ⏰ This download link will expire in 7 days.
+              ⏰ Dieser Download-Link läuft in 7 Tagen ab.
+            </p>
+
+            <p style="color: #888; font-size: 0.85em; margin-top: 10px;">
+              💡 Der erste Download kann 30-60 Sekunden dauern, während die ZIP-Datei vorbereitet wird. Nachfolgende Downloads sind sofort verfügbar.
             </p>
 
             <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
@@ -786,15 +794,23 @@ app.get('/api/download/:token', async (req, res) => {
       `);
     }
 
-    // Create zip archive
+    // Create zip archive and stream to temp file
     const archive = archiver('zip', {
-      zlib: { level: 9 } // Maximum compression
+      zlib: { level: 6 } // Balanced compression (faster than level 9, minimal size difference for images)
     });
 
-    const chunks = [];
-    archive.on('data', (chunk) => chunks.push(chunk));
+    // Stream to temporary file instead of memory
+    const tempZipPath = path.join(ZIP_CACHE_DIR, `temp-${tokenHash}.zip`);
+    const output = fs.createWriteStream(tempZipPath);
+
+    archive.pipe(output);
+
     archive.on('error', (err) => {
       console.error('Archive error:', err);
+      // Clean up temp file
+      if (fs.existsSync(tempZipPath)) {
+        fs.unlinkSync(tempZipPath);
+      }
       throw err;
     });
 
@@ -820,24 +836,27 @@ app.get('/api/download/:token', async (req, res) => {
 
     // Finalize the archive
     const finalizePromise = new Promise((resolve, reject) => {
-      archive.on('finish', resolve);
+      output.on('close', resolve);
+      output.on('error', reject);
       archive.on('error', reject);
     });
 
     archive.finalize();
     await finalizePromise;
 
-    const zipBuffer = Buffer.concat(chunks);
-    console.log(`📦 Zip created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+    const stats = fs.statSync(tempZipPath);
+    console.log(`📦 Zip created: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
 
-    // Save to cache
-    fs.writeFileSync(cacheFilePath, zipBuffer);
+    // Move temp file to cache location
+    fs.renameSync(tempZipPath, cacheFilePath);
     console.log(`💾 Cached zip for future requests`);
 
-    // Send zip to client
+    // Stream zip to client
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="wedding-photos-${Date.now()}.zip"`);
-    res.send(zipBuffer);
+
+    const fileStream = fs.createReadStream(cacheFilePath);
+    fileStream.pipe(res);
 
   } catch (error) {
     console.error('Error processing download:', error.message);

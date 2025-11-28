@@ -120,8 +120,8 @@ async function extractExifDate(s3Url, fileType) {
     // CreateDate is when the file was created
     // ModifyDate is when the file was modified
     const timestamp = result.tags?.DateTimeOriginal ||
-                     result.tags?.CreateDate ||
-                     result.tags?.ModifyDate;
+      result.tags?.CreateDate ||
+      result.tags?.ModifyDate;
 
     if (timestamp) {
       // EXIF timestamps are in seconds, convert to milliseconds
@@ -224,12 +224,20 @@ app.post('/api/confirm', async (req, res) => {
     try {
       console.log(`Calculating hash for ${filename}...`);
       const response = await axios.get(s3Url, {
-        responseType: 'arraybuffer',
+        responseType: 'stream',
         timeout: 30000,
       });
 
-      // Calculate SHA-256 hash
-      fileHash = crypto.createHash('sha256').update(Buffer.from(response.data)).digest('hex');
+      // Calculate SHA-256 hash using stream
+      const hash = crypto.createHash('sha256');
+      response.data.pipe(hash);
+
+      await new Promise((resolve, reject) => {
+        response.data.on('end', resolve);
+        response.data.on('error', reject);
+      });
+
+      fileHash = hash.digest('hex');
       console.log(`File hash: ${fileHash}`);
 
       // Check if this file already exists
@@ -419,12 +427,12 @@ app.post('/api/download-zip', async (req, res) => {
 
         // Download photo from S3
         const response = await axios.get(freshUrl, {
-          responseType: 'arraybuffer',
+          responseType: 'stream',
           timeout: 30000,
         });
 
         // Add to zip with original filename
-        archive.append(Buffer.from(response.data), { name: photo.filename });
+        archive.append(response.data, { name: photo.filename });
       } catch (error) {
         console.error(`Failed to add ${photo.filename}:`, error.message);
         // Continue with other photos

@@ -18,7 +18,7 @@ async function generateResizedImages(originalUrl, originalKey) {
   try {
     // Skip video files
     if (originalKey.includes('.mp4') || originalKey.includes('.mov') ||
-        originalKey.includes('.avi') || originalKey.includes('.webm')) {
+      originalKey.includes('.avi') || originalKey.includes('.webm')) {
       return { thumbnailKey: null, previewKey: null };
     }
 
@@ -26,14 +26,16 @@ async function generateResizedImages(originalUrl, originalKey) {
 
     // Download the original image from S3
     const response = await axios.get(originalUrl, {
-      responseType: 'arraybuffer',
+      responseType: 'stream',
       timeout: 30000,
     });
 
-    const imageBuffer = Buffer.from(response.data);
+    // Create sharp pipeline from stream
+    const pipeline = sharp();
+    response.data.pipe(pipeline);
 
     // Generate thumbnail (300x300 square, cropped)
-    const thumbnailBuffer = await sharp(imageBuffer)
+    const thumbnailBufferPromise = pipeline.clone()
       .rotate() // Auto-rotate based on EXIF orientation
       .resize(THUMB_WIDTH, THUMB_HEIGHT, {
         fit: 'cover',
@@ -43,7 +45,7 @@ async function generateResizedImages(originalUrl, originalKey) {
       .toBuffer();
 
     // Generate preview (1920px max, maintain aspect ratio)
-    const previewBuffer = await sharp(imageBuffer)
+    const previewBufferPromise = pipeline.clone()
       .rotate() // Auto-rotate based on EXIF orientation
       .resize(PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT, {
         fit: 'inside',
@@ -51,6 +53,11 @@ async function generateResizedImages(originalUrl, originalKey) {
       })
       .jpeg({ quality: 85 })
       .toBuffer();
+
+    const [thumbnailBuffer, previewBuffer] = await Promise.all([
+      thumbnailBufferPromise,
+      previewBufferPromise
+    ]);
 
     // Generate S3 keys
     const thumbKey = originalKey.replace('uploads/', 'uploads/thumbs/');

@@ -1,4 +1,6 @@
 const sharp = require('sharp');
+// Limit sharp to use only 1 CPU core to prevent high load
+sharp.concurrency(1);
 const axios = require('axios');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { s3Client, BUCKET_NAME } = require('./s3');

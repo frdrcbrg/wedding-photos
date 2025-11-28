@@ -18,6 +18,10 @@ const dbOps = require('./database');
 const s3Ops = require('./s3');
 const { generateResizedImages } = require('./thumbnail');
 const { testSMTPConnection } = require('./smtp-preflight');
+const ProcessingQueue = require('./processing-queue');
+
+// Initialize processing queue with concurrency 1
+const imageProcessingQueue = new ProcessingQueue(1);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -279,9 +283,12 @@ app.post('/api/confirm', async (req, res) => {
     const uploadId = result.lastInsertRowid;
 
     // Generate resized images (thumbnail + preview) asynchronously (don't block response)
+    // Generate resized images (thumbnail + preview) asynchronously via queue
     if (fileType === 'photo') {
-      generateResizedImages(s3Url, s3Key)
-        .then(async ({ thumbnailKey, previewKey }) => {
+      imageProcessingQueue.add(async () => {
+        try {
+          const { thumbnailKey, previewKey } = await generateResizedImages(s3Url, s3Key);
+
           if (thumbnailKey) {
             await dbOps.updateThumbnailKey(uploadId, thumbnailKey);
             console.log(`Thumbnail generated for upload ${uploadId}`);
@@ -290,10 +297,14 @@ app.post('/api/confirm', async (req, res) => {
             await dbOps.updatePreviewKey(uploadId, previewKey);
             console.log(`Preview generated for upload ${uploadId}`);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error(`Failed to generate resized images for upload ${uploadId}:`, error);
-        });
+        }
+      }).catch(err => {
+        console.error('Queue error:', err);
+      });
+
+      console.log(`Image processing queued for upload ${uploadId}. Queue size: ${imageProcessingQueue.getStats().queued}`);
     }
 
     res.json({
